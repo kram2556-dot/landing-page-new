@@ -5,7 +5,9 @@ pages_build_output_dir = "dist/public"
 [[d1_databases]]
 binding = "DB"
 database_name = "luma-store-db"
-database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+database_id = "8ef5d0f8-90fa-4101-aa66-55c9480a01bc"
+
+
 migrations_dir = "drizzle"
 
 [vars]
