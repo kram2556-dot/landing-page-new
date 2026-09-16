@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+export type ThemeType = "medical" | "sneakers" | "fashion" | "perfume" | "home" | "kids";
+
 export interface ProvinceItem {
   id: string;
   name: string;
@@ -8,7 +10,7 @@ export interface ProvinceItem {
 }
 
 export interface CountryConfig {
-  code: "EG" | "SA" | "AE" | "LY";
+  code: string;
   name: string;
   currency: string;
   phoneCode: string;
@@ -38,23 +40,27 @@ export interface ReviewItem {
 export interface StoreConfig {
   storeName: string;
   logoUrl: string;
-  primaryColor: string;
+  selectedTheme: ThemeType;
   showTopBar: boolean;
   topBarText: string;
   showTimer: boolean;
   timerMinutes: number;
 
-  // ميزات التحويل الذكية
+  // محفزات التحويل السريع
   showStockBar: boolean;
   stockLeft: number;
   showRecentSales: boolean;
   showStickyButton: boolean;
 
-  // الدولة النشطة والشحن
-  activeCountry: "EG" | "SA" | "AE" | "LY";
+  // واتساب الدعم العائم
+  showSupportWhatsapp: boolean;
+  supportWhatsappNumber: string;
+
+  // الدول والشحن
+  activeCountry: string;
   countries: Record<string, CountryConfig>;
 
-  // المنتج
+  // المنتج والتسعير
   productTitle: string;
   productImage: string;
   gallery: GalleryItem[];
@@ -72,18 +78,27 @@ export interface StoreConfig {
   showBundles: boolean;
   bundles: BundleItem[];
 
-  // ضمان وتقييمات
+  // الضمان والتقييمات
   showGuarantee: boolean;
   guaranteeText: string;
   guaranteeSubtext?: string;
   showReviews: boolean;
   reviews: ReviewItem[];
 
-  // تتبع
+  // تتبع وطلبات
   whatsappNumber: string;
   metaPixelId: string;
   tiktokPixelId: string;
 }
+
+export const THEMES_LIST = [
+  { id: "medical", name: "طبي وعلاجي (Medical Cyan)", color: "#0284c7", bg: "فاتح / أزرق وأبيض" },
+  { id: "sneakers", name: "أحذية ورياضة (Street Sneakers)", color: "#f97316", bg: "داكن / أسود كربوني" },
+  { id: "fashion", name: "ملابس وأزياء (Fashion Elegance)", color: "#b45309", bg: "بيج دافئ ورمادي" },
+  { id: "perfume", name: "عطور وتجميل (Royal Perfume)", color: "#ec4899", bg: "أسود ملكي ووردي ذهبي" },
+  { id: "home", name: "أدوات منزلية وكهربائية (Home & Tech)", color: "#2563eb", bg: "أزرق تكنولوجي داكن" },
+  { id: "kids", name: "ألعاب أطفال وهدايا (Kids Joy)", color: "#10b981", bg: "ألوان مبهجة وحيوية" }
+];
 
 const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
   EG: {
@@ -116,7 +131,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
   },
   SA: {
     code: "SA",
-    name: "المملكة العربية السعودية",
+    name: "السعودية",
     currency: "ر.س",
     phoneCode: "+966",
     provinces: [
@@ -134,7 +149,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
   },
   AE: {
     code: "AE",
-    name: "الإمارات العربية المتحدة",
+    name: "الإمارات",
     currency: "د.إ",
     phoneCode: "+971",
     provinces: [
@@ -168,7 +183,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
   logoUrl: "",
-  primaryColor: "#f59e0b",
+  selectedTheme: "sneakers",
   showTopBar: true,
   topBarText: "عرض خاص لفترة محدودة — شحن سريع ومعاينة قبل الدفع",
   showTimer: true,
@@ -177,6 +192,8 @@ const DEFAULT_CONFIG: StoreConfig = {
   stockLeft: 7,
   showRecentSales: true,
   showStickyButton: true,
+  showSupportWhatsapp: true,
+  supportWhatsappNumber: "+201000000000",
   activeCountry: "EG",
   countries: DEFAULT_COUNTRIES,
   productTitle: "حذاء مريح وخفيف للجري والمشي الطويل",
@@ -203,7 +220,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   ],
   showGuarantee: true,
   guaranteeText: "معاينة وقياس المنتج مجاناً قبل الاستلام والدفع للمندوب",
-  guaranteeSubtext: "إذا لم يناسبك المقاس أو الخامة يمكنك الإرجاع فوراً مع المندوب دون دفع أي تكاليف",
+  guaranteeSubtext: "إذا لم يناسبك المقاس أو الخامة يمكنك الإرجاع فوراً مع المندوب دون دفع أي مصاريف",
   showReviews: true,
   reviews: [
     { name: "أحمد م.", comment: "الحذاء مريح جداً بعد وقفة 8 ساعات في العمل، خامة فاخرة.", rating: 5 },
@@ -226,10 +243,18 @@ export default function Admin() {
   const [newPassword, setNewPassword] = useState("");
   const [authSuccessMsg, setAuthSuccessMsg] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"settings" | "shipping" | "gallery" | "reviews" | "orders" | "security">("settings");
+  const [activeTab, setActiveTab] = useState<"settings" | "themes" | "shipping" | "gallery" | "reviews" | "orders" | "security">("settings");
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [orders, setOrders] = useState<any[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // حقول إضافة دولة جديدة
+  const [showAddCountryModal, setShowAddCountryModal] = useState(false);
+  const [newCountryName, setNewCountryName] = useState("");
+  const [newCountryCode, setNewCountryCode] = useState("");
+  const [newCountryCurrency, setNewCountryCurrency] = useState("");
+  const [newCountryPhoneCode, setNewCountryPhoneCode] = useState("");
+  const [newCountryProvincesRaw, setNewCountryProvincesRaw] = useState("");
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("store_admin_email");
@@ -245,7 +270,6 @@ export default function Admin() {
     if (savedConfig) {
       try {
         const parsed = JSON.parse(savedConfig);
-        // دمج لضمان عدم فقدان أي خصائص جديدة
         setConfig({
           ...DEFAULT_CONFIG,
           ...parsed,
@@ -269,17 +293,31 @@ export default function Admin() {
     }
   }, []);
 
+  // ضاغط الصور السحري من الاستوديو
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          callback(reader.result);
-        }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 700;
+        const scale = MAX_WIDTH / Math.max(img.width, MAX_WIDTH);
+        canvas.width = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
+        canvas.height = img.width > MAX_WIDTH ? img.height * scale : img.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // ضغط مباشر وصيغة خفيفة جداً
+        const compressed = canvas.toDataURL("image/jpeg", 0.65);
+        callback(compressed);
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -299,9 +337,15 @@ export default function Admin() {
   };
 
   const handleSaveConfig = () => {
-    localStorage.setItem("store_config", JSON.stringify(config));
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    try {
+      localStorage.setItem("store_config", JSON.stringify(config));
+      setSaveSuccess(true);
+      alert("✓ تم حفظ جميع التعديلات بنجاح!");
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (error) {
+      alert("حجم الصور المرفوعة كبير جداً. يرجى مسح بعض الصور أو رفع صورة أصغر لتتمكن من الحفظ.");
+      console.error(error);
+    }
   };
 
   const handleUpdateSecurity = (e: React.FormEvent) => {
@@ -315,6 +359,45 @@ export default function Admin() {
     setTimeout(() => setAuthSuccessMsg(""), 3000);
   };
 
+  // إضافة دولة جديدة للقائمة
+  const handleAddNewCountry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCountryCode || !newCountryName || !newCountryCurrency) return;
+
+    const code = newCountryCode.trim().toUpperCase();
+    const provs: ProvinceItem[] = newCountryProvincesRaw
+      ? newCountryProvincesRaw.split(",").map((p, idx) => ({
+          id: `p_${idx}`,
+          name: p.trim(),
+          enabled: true,
+          shippingCost: 0
+        }))
+      : [{ id: "main", name: "العاصمة", enabled: true, shippingCost: 0 }];
+
+    const newCountry: CountryConfig = {
+      code,
+      name: newCountryName.trim(),
+      currency: newCountryCurrency.trim(),
+      phoneCode: newCountryPhoneCode.trim() || "+",
+      provinces: provs
+    };
+
+    const updatedCountries = { ...config.countries, [code]: newCountry };
+    setConfig({
+      ...config,
+      countries: updatedCountries,
+      activeCountry: code
+    });
+
+    setShowAddCountryModal(false);
+    setNewCountryName("");
+    setNewCountryCode("");
+    setNewCountryCurrency("");
+    setNewCountryPhoneCode("");
+    setNewCountryProvincesRaw("");
+    alert(`تمت إضافة دولة ${newCountry.name} وتعيينها كدولة نشطة!`);
+  };
+
   const currentCountry = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
 
   if (!isAuthenticated) {
@@ -323,7 +406,7 @@ export default function Admin() {
         <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl max-w-sm w-full space-y-6 shadow-2xl">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold text-amber-400">لوحة تحكم المتجر</h1>
-            <p className="text-xs text-neutral-400">سجل الدخول لإدارة المنتجات والشحن والطلبات</p>
+            <p className="text-xs text-neutral-400">سجل الدخول لإدارة المنتجات والثيمات والطلبات</p>
           </div>
           {loginError && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-lg text-center">
@@ -375,7 +458,7 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <span className="font-extrabold text-amber-400 text-lg">إدارة المتجر</span>
             <span className="bg-neutral-800 text-neutral-300 text-xs px-2.5 py-0.5 rounded border border-neutral-700">
-              الدولة الحالية: {currentCountry.name} ({currentCountry.currency})
+              الدولة: {currentCountry.name} ({currentCountry.currency})
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -396,10 +479,12 @@ export default function Admin() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 mt-6">
+        {/* التبويبات */}
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-2">
           {[
             { id: "settings", label: "المنتج والمظهر" },
-            { id: "shipping", label: `الدول والمحافظات والشحن (${currentCountry.name})` },
+            { id: "themes", label: "ثيمات الألوان الجاهزة" },
+            { id: "shipping", label: `الدول والشحن (${currentCountry.name})` },
             { id: "gallery", label: "معرض الصور والشرح" },
             { id: "reviews", label: "آراء العملاء" },
             { id: "orders", label: `الطلبات (${orders.length})` },
@@ -417,15 +502,15 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* 1. تبويب المنتج والمظهر ومحفزات الشراء */}
+        {/* 1. تبويب المنتج والمظهر ومحفزات التحويل */}
         {activeTab === "settings" && (
           <div className="mt-6 space-y-6">
-            {/* الهوية والمظهر */}
+            {/* الهوية والشعار */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
               <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">
-                الهوية واللون العام (طبي، أحذية، ملابس)
+                الهوية وشعار المتجر
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-300 mb-1">اسم المتجر</label>
                   <input
@@ -457,27 +542,37 @@ export default function Admin() {
                     )}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1">اللون الأساسي للأزرار والشرائط</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={config.primaryColor}
-                      onChange={(e) => setConfig({ ...config, primaryColor: e.target.value })}
-                      className="w-10 h-10 rounded border border-neutral-700 bg-transparent cursor-pointer"
-                    />
-                    <span className="text-xs font-mono text-neutral-400">{config.primaryColor}</span>
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* أدوات التحويل السريع والنفسية */}
+            {/* واتساب الدعم ومحفزات التحويل */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
               <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">
-                محفزات التحويل السريع (Conversion Boosters)
+                محفزات التحويل وأيقونة واتساب الدعم
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                {/* واتساب الدعم العائم */}
+                <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-neutral-200">
+                    <input
+                      type="checkbox"
+                      checked={config.showSupportWhatsapp}
+                      onChange={(e) => setConfig({ ...config, showSupportWhatsapp: e.target.checked })}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <span>أيقونة واتساب الدعم العائمة</span>
+                  </label>
+                  {config.showSupportWhatsapp && (
+                    <input
+                      type="text"
+                      value={config.supportWhatsappNumber}
+                      onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })}
+                      placeholder="رقم الدعم بالرمز الدولي"
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded p-1.5 text-xs text-left font-mono"
+                    />
+                  )}
+                </div>
+
                 {/* شريط المخزون */}
                 <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-neutral-200">
@@ -491,12 +586,12 @@ export default function Admin() {
                   </label>
                   {config.showStockBar && (
                     <div className="flex items-center gap-2 text-xs">
-                      <span>القطع المتبقية:</span>
+                      <span>القطع:</span>
                       <input
                         type="number"
                         value={config.stockLeft}
                         onChange={(e) => setConfig({ ...config, stockLeft: Number(e.target.value) })}
-                        className="w-16 bg-neutral-900 border border-neutral-800 rounded p-1 text-center"
+                        className="w-14 bg-neutral-900 border border-neutral-800 rounded p-1 text-center"
                       />
                     </div>
                   )}
@@ -513,10 +608,10 @@ export default function Admin() {
                     />
                     <span>إشعارات الشراء اللحظية</span>
                   </label>
-                  <p className="text-[11px] text-neutral-400">نافذة تنبثق كل 20 ثانية (طلب فلان من محافظة كذا قبل قليل)</p>
+                  <p className="text-[10px] text-neutral-400">نافذة تنبثق كل 20 ثانية لزيادة الثقة</p>
                 </div>
 
-                {/* زر الشراء العائم */}
+                {/* زر الشراء العائم للموبايل */}
                 <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-neutral-200">
                     <input
@@ -527,12 +622,12 @@ export default function Admin() {
                     />
                     <span>زر الشراء العائم للموبايل</span>
                   </label>
-                  <p className="text-[11px] text-neutral-400">زر ثابت أسفل شاشة الموبايل يظهر أثناء تصفح العميل</p>
+                  <p className="text-[10px] text-neutral-400">يثبت أسفل الشاشة للتنقل للطلب بلمسة</p>
                 </div>
               </div>
             </div>
 
-            {/* تفاصيل المنتج والصورة */}
+            {/* تفاصيل المنتج والتسعير */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
               <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">بيانات المنتج والتسعير</h3>
               <div className="space-y-4">
@@ -550,7 +645,7 @@ export default function Admin() {
                   <label className="block text-xs font-semibold text-neutral-300 mb-1">صورة المنتج الرئيسية</label>
                   <div className="flex items-center gap-3">
                     <label className="cursor-pointer bg-neutral-800 hover:bg-neutral-700 text-xs px-4 py-2.5 rounded-lg text-neutral-200 border border-neutral-700">
-                      <span>📸 رفع صورة من الاستوديو</span>
+                      <span>📸 رفع صورة من الاستوديو (ضغط تلقائي)</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -658,20 +753,66 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 2. تبويب الدول والمحافظات وأسعار الشحن */}
+        {/* 2. تبويب ثيمات الألوان الجاهزة */}
+        {activeTab === "themes" && (
+          <div className="mt-6 space-y-4">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <div>
+                <h3 className="font-bold text-amber-400 text-base">اختر ثيم القالب المناسب لمنتجك</h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  تغيير الثيم يغير ألوان الخلفية، الأزرار، والخطوط تلقائياً لتناسب سيكولوجية بيع المنتج
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                {THEMES_LIST.map((th) => {
+                  const isSelected = config.selectedTheme === th.id;
+                  return (
+                    <div
+                      key={th.id}
+                      onClick={() => setConfig({ ...config, selectedTheme: th.id as ThemeType })}
+                      className={`cursor-pointer p-4 rounded-xl border-2 transition relative ${
+                        isSelected
+                          ? "border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10"
+                          : "border-neutral-800 bg-neutral-950 hover:border-neutral-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-sm text-neutral-200">{th.name}</span>
+                        <span className="w-5 h-5 rounded-full" style={{ backgroundColor: th.color }} />
+                      </div>
+                      <p className="text-xs text-neutral-400">{th.bg}</p>
+                      {isSelected && (
+                        <span className="absolute top-2 left-2 text-amber-400 font-bold text-xs">✓ مفعل</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. تبويب الدول والمحافظات وإضافة دولة جديدة */}
         {activeTab === "shipping" && (
           <div className="mt-6 space-y-6">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
-              <div className="border-b border-neutral-800 pb-3">
-                <h3 className="font-bold text-amber-400 text-base">اختيار الدولة المستهدفة للحملة</h3>
-                <p className="text-xs text-neutral-400 mt-1">
-                  تغيير الدولة يحوّل العملة وكود الهاتف تلقائياً في صفحة الزبون ونموذج الطلب
-                </p>
+              <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
+                <div>
+                  <h3 className="font-bold text-amber-400 text-base">الدولة المستهدفة ومناطق الشحن</h3>
+                  <p className="text-xs text-neutral-400 mt-1">اختر الدولة الحالية للحملة أو أضف دولة جديدة</p>
+                </div>
+                <button
+                  onClick={() => setShowAddCountryModal(true)}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-2 rounded-lg transition"
+                >
+                  + إضافة دولة جديدة
+                </button>
               </div>
 
               {/* أزرار اختيار الدولة */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(Object.keys(config.countries) as Array<"EG" | "SA" | "AE" | "LY">).map((cCode) => {
+                {Object.keys(config.countries).map((cCode) => {
                   const country = config.countries[cCode];
                   const isSelected = config.activeCountry === cCode;
                   return (
@@ -691,7 +832,7 @@ export default function Admin() {
                 })}
               </div>
 
-              {/* إدارة محافظات الدولة الحالية */}
+              {/* إدارة محافظات الدولة النشطة */}
               <div className="pt-4 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 pb-2">
                   <span className="font-bold text-sm text-neutral-200">
@@ -767,17 +908,101 @@ export default function Admin() {
                 </div>
               </div>
             </div>
+
+            {/* نافذة إضافة دولة جديدة */}
+            {showAddCountryModal && (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl max-w-md w-full space-y-4">
+                  <h3 className="font-bold text-base text-amber-400">إضافة دولة جديدة للنظام</h3>
+                  <form onSubmit={handleAddNewCountry} className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-neutral-300 mb-1">اسم الدولة (مثلاً: الكويت / الأردن)</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCountryName}
+                        onChange={(e) => setNewCountryName(e.target.value)}
+                        placeholder="الكويت"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-neutral-300 mb-1">رمز الدولة (مثال: KW)</label>
+                        <input
+                          type="text"
+                          required
+                          value={newCountryCode}
+                          onChange={(e) => setNewCountryCode(e.target.value)}
+                          placeholder="KW"
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs uppercase text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-neutral-300 mb-1">رمز العملة (مثال: د.ك)</label>
+                        <input
+                          type="text"
+                          required
+                          value={newCountryCurrency}
+                          onChange={(e) => setNewCountryCurrency(e.target.value)}
+                          placeholder="د.ك"
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-center"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-300 mb-1">كود الاتصال الدولي (مثال: +965)</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCountryPhoneCode}
+                        onChange={(e) => setNewCountryPhoneCode(e.target.value)}
+                        placeholder="+965"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-left font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-300 mb-1">
+                        المحافظات / المدن (اكتبها مفصولة بفاصلة)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={newCountryProvincesRaw}
+                        onChange={(e) => setNewCountryProvincesRaw(e.target.value)}
+                        placeholder="حولي, الفروانية, الأحمدي, العاصمة, الجهراء"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="submit"
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 rounded-lg text-xs"
+                      >
+                        إضافة وتفعيل فوراً
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCountryModal(false)}
+                        className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-4 py-2 rounded-lg text-xs"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* 3. تبويب المعرض والشرح */}
+        {/* 4. تبويب المعرض والشرح */}
         {activeTab === "gallery" && (
           <div className="mt-6 space-y-4">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
                 <div>
                   <h3 className="font-bold text-amber-400 text-base">معرض الصور مع الشرح التوضيحي</h3>
-                  <p className="text-xs text-neutral-400">أضف صوراً توضيحية للمنتج واكتب تحت كل صورة ميزتها أو طريقة استخدامها</p>
+                  <p className="text-xs text-neutral-400">أضف صوراً تفصيلية للمنتج واكتب تحت كل صورة شرحها</p>
                 </div>
                 <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-2 rounded-lg">
                   <span>+ رفع صورة من الاستوديو</span>
@@ -790,7 +1015,7 @@ export default function Admin() {
                         const newItem: GalleryItem = {
                           id: Date.now().toString(),
                           image: url,
-                          caption: "شرح أو ميزة لهذه الصورة"
+                          caption: "اكتب وصفاً أو شرحاً لهذه الصورة هنا"
                         };
                         setConfig({ ...config, gallery: [...config.gallery, newItem] });
                       })
@@ -800,7 +1025,7 @@ export default function Admin() {
               </div>
 
               {config.gallery.length === 0 ? (
-                <div className="text-center py-8 text-neutral-500 text-xs">لا توجد صور مضافة في المعرض</div>
+                <div className="text-center py-8 text-neutral-500 text-xs">لا توجد صور مضافة للمعرض</div>
               ) : (
                 <div className="space-y-3">
                   {config.gallery.map((g, idx) => (
@@ -832,7 +1057,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 4. تبويب التقييمات */}
+        {/* 5. تبويب التقييمات */}
         {activeTab === "reviews" && (
           <div className="mt-6 space-y-4">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
@@ -907,7 +1132,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 5. تبويب الطلبات المستلمة */}
+        {/* 6. تبويب الطلبات */}
         {activeTab === "orders" && (
           <div className="mt-6">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
@@ -957,14 +1182,14 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 6. تبويب الأمان والبيكسل */}
+        {/* 7. تبويب الأمان والبيكسل */}
         {activeTab === "security" && (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
               <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">التتبع والواتساب</h3>
               <div>
                 <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                  رقم الواتساب لاستقبال الطلبات
+                  رقم الواتساب لاستقبال إشعارات الطلبات
                 </label>
                 <input
                   type="text"
