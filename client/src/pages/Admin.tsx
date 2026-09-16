@@ -1,58 +1,654 @@
-import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Check, ChevronDown, GripVertical, ImagePlus, LayoutDashboard, LogOut, Menu, Palette, Package, Pencil, Plus, Settings2, ShoppingBag, Trash2, Truck, Users, X } from "lucide-react";
-import AdminShipping from "../components/AdminShipping";
-import AdminSettings from "../components/AdminSettings";
+import React, { useState, useEffect } from "react";
 
-type Lang = "ar" | "en";
-const labels = {
-  ar: { brand: "LUMA / لوحة التحكم", overview: "نظرة عامة", product: "المنتج", landing: "الصفحة الرئيسية", orders: "الطلبات", shipping: "الشحن", theme: "الهوية البصرية", settings: "الإعدادات", logout: "تسجيل الخروج", hello: "صباح الخير، سارة", summary: "إليك ملخص متجرك اليوم.", ordersToday: "طلبات اليوم", revenue: "إجمالي المبيعات", visitors: "الزوار", conversion: "معدل التحويل", manageProduct: "إدارة المنتج", productName: "اسم المنتج", price: "السعر", available: "متوفر للبيع", save: "حفظ التغييرات", gallery: "معرض الصور", add: "إضافة صورة جديدة", limit: "3 من 8 صور", appearance: "تخصيص المظهر", primary: "اللون الأساسي", secondary: "اللون الثانوي", announcement: "إظهار شريط الإعلان", recent: "أحدث الطلبات", customer: "العميل", status: "الحالة", amount: "الإجمالي", newOrder: "جديد", confirmed: "تم التأكيد", shipped: "جاري الشحن", openStore: "فتح المتجر", menu: "القائمة" },
-  en: { brand: "LUMA / ADMIN", overview: "Overview", product: "Product", landing: "Landing page", orders: "Orders", shipping: "Shipping", theme: "Brand identity", settings: "Settings", logout: "Log out", hello: "Good morning, Sara", summary: "Here's your store summary today.", ordersToday: "Today's orders", revenue: "Total revenue", visitors: "Visitors", conversion: "Conversion rate", manageProduct: "Manage product", productName: "Product name", price: "Price", available: "Available for sale", save: "Save changes", gallery: "Gallery", add: "Add new image", limit: "3 of 8 images", appearance: "Customize appearance", primary: "Primary color", secondary: "Secondary color", announcement: "Show announcement bar", recent: "Recent orders", customer: "Customer", status: "Status", amount: "Amount", newOrder: "New", confirmed: "Confirmed", shipped: "Shipping", openStore: "Open store", menu: "Menu" },
+interface BundleItem {
+  qty: number;
+  title: string;
+  price: number;
+  badge?: string;
+  savings?: string;
+}
+
+interface StoreConfig {
+  storeName: string;
+  logoUrl?: string;
+  showTopBar: boolean;
+  topBarText: string;
+  showTimer: boolean;
+  timerMinutes: number;
+  productTitle: string;
+  productImage: string;
+  currentPrice: number;
+  oldPrice: number;
+  currency: string;
+  features: string[];
+  showBundles: boolean;
+  bundles: BundleItem[];
+  showGuarantee: boolean;
+  guaranteeText: string;
+  guaranteeSubtext?: string;
+  showReviews: boolean;
+  reviews: { name: string; comment: string; rating: number }[];
+  whatsappNumber: string;
+}
+
+const DEFAULT_CONFIG: StoreConfig = {
+  storeName: "متجر النخبة",
+  logoUrl: "",
+  showTopBar: true,
+  topBarText: "عرض خاص لفترة محدودة — شحن سريع وتوصيل للمنزل",
+  showTimer: true,
+  timerMinutes: 15,
+  productTitle: "مصباح لوما الذكي — إضاءة دافئة بتصميم عصري",
+  productImage: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&auto=format&fit=crop&q=80",
+  currentPrice: 32,
+  oldPrice: 49,
+  currency: "د.أ",
+  features: [
+    "إضاءة دافئة مريحة للعين وقابلة للتحكم باللمس",
+    "تصميم عصري من خامات متينة وموفرة للطاقة",
+    "توصيل سريع حتى باب المنزل والدفع عند الاستلام"
+  ],
+  showBundles: true,
+  bundles: [
+    { qty: 1, title: "قطعة واحدة", price: 32 },
+    { qty: 2, title: "قطعتان", price: 58, badge: "الأكثر طلباً", savings: "وفر 6 د.أ" },
+    { qty: 3, title: "ثلاث قطع", price: 81, savings: "وفر 15 د.أ" }
+  ],
+  showGuarantee: true,
+  guaranteeText: "معاينة مجانية للمنتج قبل الاستلام والدفع للمندوب",
+  guaranteeSubtext: "إن لم يعجبك المنتج فلن تدفع أي رسوم",
+  showReviews: true,
+  reviews: [
+    { name: "عمر س.", comment: "ممتاز جداً وخامته فاخرة والتوصيل كان سريعاً في يومين فقط.", rating: 5 },
+    { name: "نور ع.", comment: "الإضاءة هادئة وممتازة للمكتب، شكراً لكم على حسن التعامل.", rating: 5 }
+  ],
+  whatsappNumber: "+962790000000"
 };
 
-const gallery = [
-  "https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=500&q=80",
-  "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=500&q=80",
-  "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=500&q=80",
-];
-
 export default function Admin() {
-  const [lang, setLang] = useState<Lang>("ar");
-  const [active, setActive] = useState("overview");
-  const [menu, setMenu] = useState(false);
-  const [productName, setProductName] = useState("LUMA / 01");
-  const [price, setPrice] = useState("32.00");
-  const [available, setAvailable] = useState(true);
-  const [announcement, setAnnouncement] = useState(true);
-  const [primary, setPrimary] = useState("#E8C77E");
-  const [secondary, setSecondary] = useState("#B8863F");
-  const [saved, setSaved] = useState(false);
-  const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
-  const [galleryItems, setGalleryItems] = useState(gallery);
-  const t = labels[lang];
-  const dir = lang === "ar" ? "rtl" : "ltr";
-  const navItems = useMemo(() => [{ id: "overview", label: t.overview, icon: LayoutDashboard }, { id: "product", label: t.product, icon: Package }, { id: "landing", label: t.landing, icon: Palette }, { id: "orders", label: t.orders, icon: ShoppingBag }, { id: "shipping", label: t.shipping, icon: Truck }, { id: "settings", label: t.settings, icon: Settings2 }], [t]);
-  const save = () => { setSaved(true); window.setTimeout(() => setSaved(false), 2200); };
-  const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || galleryItems.length >= 8) return;
-    const image = new Image();
-    image.src = URL.createObjectURL(file);
-    await new Promise<void>((resolve) => { image.onload = () => resolve(); });
-    const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
-    const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
-    const context = canvas.getContext('2d'); context?.drawImage(image, 0, 0, canvas.width, canvas.height);
-    let quality = .8; let compressed = canvas.toDataURL('image/webp', quality);
-    while (compressed.length * .75 > 200 * 1024 && quality > .35) { quality -= .1; compressed = canvas.toDataURL('image/webp', quality); }
-    setGalleryItems((items) => [...items, compressed]); URL.revokeObjectURL(image.src); event.target.value = '';
-  };
-  useEffect(() => { fetch("/api/admin/orders").then((response) => response.ok ? response.json() : { orders: [] }).then((data) => { const typed = data as { orders?: Array<Record<string, unknown>> }; setOrders(typed.orders ?? []); }).catch(() => setOrders([])); }, []);
+  // المصادقة والأمان
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [loginError, setLoginError] = useState("");
 
-  return <div className="admin-shell" dir={dir} style={{ "--admin-primary": primary, "--admin-secondary": secondary } as React.CSSProperties}>
-    <aside className={menu ? "admin-sidebar open" : "admin-sidebar"}><div className="admin-brand"><span className="brand-mark">L</span><span>{t.brand}</span><button className="admin-close" onClick={() => setMenu(false)}><X size={18} /></button></div><div className="admin-store"><div className="store-avatar">L</div><div><b>LUMA Studio</b><span>luma-studio.com</span></div><ChevronDown size={15} /></div><nav>{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={active === id ? "active" : ""} onClick={() => { setActive(id); setMenu(false); }}><Icon size={17} />{label}</button>)}</nav><button className="admin-logout"><LogOut size={16} />{t.logout}</button></aside>
-    <div className="admin-main"><header className="admin-header"><button className="admin-menu" onClick={() => setMenu(true)}><Menu size={20} />{t.menu}</button><div className="admin-header-actions"><button className="admin-lang" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>{lang === "ar" ? "English" : "العربية"}</button><a href="/" className="store-link">{t.openStore} ↗</a><div className="admin-avatar">SA</div></div></header><div className="admin-content">
-      {active === "overview" && <><div className="admin-welcome"><div><span className="admin-eyebrow">LUMA / {lang === "ar" ? "لوحة القيادة" : "DASHBOARD"}</span><h1>{t.hello}</h1><p>{t.summary}</p></div><button className="admin-primary" onClick={() => setActive("product")}><Pencil size={15} />{t.manageProduct}</button></div><div className="stat-grid"><div className="admin-stat"><span>{t.ordersToday}</span><strong>24</strong><small className="positive">↑ 18.2%</small><div className="mini-bars"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="admin-stat"><span>{t.revenue}</span><strong>$768</strong><small className="positive">↑ 12.8%</small><div className="mini-bars gold"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="admin-stat"><span>{t.visitors}</span><strong>1,842</strong><small className="positive">↑ 24.5%</small><div className="mini-bars violet"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="admin-stat"><span>{t.conversion}</span><strong>3.8%</strong><small className="negative">↓ 2.1%</small><div className="mini-bars warm"><i /><i /><i /><i /><i /><i /><i /></div></div></div><div className="admin-columns"><section className="admin-panel chart-panel"><div className="panel-heading"><div><h2>{lang === "ar" ? "المبيعات" : "Sales"}</h2><span>{lang === "ar" ? "آخر 7 أيام" : "Last 7 days"}</span></div><button className="period-select">{lang === "ar" ? "هذا الأسبوع" : "This week"} <ChevronDown size={14} /></button></div><div className="sales-chart"><div className="chart-y"><span>$800</span><span>$600</span><span>$400</span><span>$200</span><span>$0</span></div><div className="chart-area"><div className="chart-gridlines"><i /><i /><i /><i /><i /></div><svg viewBox="0 0 600 190" preserveAspectRatio="none"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="var(--admin-primary)" stopOpacity=".28" /><stop offset="1" stopColor="var(--admin-primary)" stopOpacity="0" /></linearGradient></defs><path d="M0,158 C45,155 55,120 100,136 S145,120 180,126 S225,80 260,103 S305,111 340,68 S385,100 420,82 S465,52 500,65 S550,35 600,18 L600,190 L0,190 Z" fill="url(#chartFill)" /><path d="M0,158 C45,155 55,120 100,136 S145,120 180,126 S225,80 260,103 S305,111 340,68 S385,100 420,82 S465,52 500,65 S550,35 600,18" fill="none" stroke="var(--admin-primary)" strokeWidth="3" /></svg><div className="chart-x"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div></div></section><section className="admin-panel quick-panel"><div className="panel-heading"><div><h2>{t.manageProduct}</h2><span>{lang === "ar" ? "تحديثات سريعة" : "Quick updates"}</span></div><button className="icon-action" onClick={() => setActive("product")}><Pencil size={15} /></button></div><div className="quick-product"><img src={gallery[0]} alt="LUMA" /><div><b>{productName}</b><span>${price} / {lang === "ar" ? "قطعة" : "piece"}</span></div><span className={available ? "stock-pill" : "stock-pill off"}>{available ? (lang === "ar" ? "متوفر" : "Live") : (lang === "ar" ? "متوقف" : "Off")}</span></div><div className="quick-row"><span>{lang === "ar" ? "شريط الإعلان" : "Announcement bar"}</span><button className={announcement ? "toggle on" : "toggle"} onClick={() => setAnnouncement(!announcement)}><i /></button></div><div className="quick-row"><span>{lang === "ar" ? "طلبات واتساب" : "WhatsApp orders"}</span><button className="toggle on"><i /></button></div><button className="admin-outline full" onClick={() => setActive("product")}>{lang === "ar" ? "فتح إعدادات المنتج" : "Open product settings"} <ChevronDown size={14} /></button></section></div></>}
-      {active === "product" && <div className="page-view"><div className="page-title"><div><span className="admin-eyebrow">LUMA / PRODUCT</span><h1>{t.manageProduct}</h1><p>{lang === "ar" ? "حدّث تفاصيل المنتج والأسعار والوسائط من مكان واحد." : "Update product details, prices, and media from one place."}</p></div><button className="admin-primary" onClick={save}>{saved ? <><Check size={16} />{lang === "ar" ? "تم الحفظ" : "Saved"}</> : <><Check size={16} />{t.save}</>}</button></div><div className="settings-grid"><section className="admin-panel form-panel"><div className="panel-heading"><div><h2>{lang === "ar" ? "معلومات المنتج" : "Product information"}</h2><span>{lang === "ar" ? "النصوص التي تظهر في الصفحة" : "Content shown on the landing page"}</span></div></div><label>{t.productName}<input value={productName} onChange={(e) => setProductName(e.target.value)} /></label><label>{lang === "ar" ? "وصف قصير" : "Short description"}<textarea rows={4} defaultValue={lang === "ar" ? "قطعة مكتبية هادئة تجمع بين الضوء الدافئ والتصميم النظيف." : "A quiet desk object combining warm light with clean design."} /></label><div className="two-fields"><label>{t.price}<input value={price} onChange={(e) => setPrice(e.target.value)} /></label><label>{lang === "ar" ? "العملة" : "Currency"}<select defaultValue="USD"><option>USD — $</option><option>JOD — د.أ</option><option>SAR — ر.س</option></select></label></div><div className="setting-switch"><div><b>{t.available}</b><span>{lang === "ar" ? "سيظهر زر الشراء عند تفعيل هذا الخيار" : "The buy button is visible when enabled"}</span></div><button className={available ? "toggle on" : "toggle"} onClick={() => setAvailable(!available)}><i /></button></div></section><section className="admin-panel gallery-panel"><div className="panel-heading"><div><h2>{t.gallery}</h2><span>{galleryItems.length} / 8 {lang === "ar" ? "صور" : "images"}</span></div><label className="admin-outline small upload-label"><Plus size={14} />{t.add}<input type="file" accept="image/*" onChange={handleGalleryUpload} /></label></div><div className="admin-gallery">{galleryItems.map((src, i) => <div className="admin-gallery-item" key={`${src}-${i}`}><img src={src} alt={`Gallery ${i + 1}`} /><div className="gallery-tools"><GripVertical size={15} /><button type="button"><Pencil size={13} /></button><button type="button" onClick={() => setGalleryItems((items) => items.filter((_, itemIndex) => itemIndex !== i))}><Trash2 size={13} /></button></div><input placeholder={lang === "ar" ? "وصف الصورة (اختياري)" : "Image description (optional)"} /></div>)}</div></section></div></div>}
-      {active === "orders" && <div className="page-view"><div className="page-title"><div><span className="admin-eyebrow">LUMA / ORDERS</span><h1>{t.recent}</h1><p>{lang === "ar" ? "تابع الطلبات وحدث حالاتها من مكان واحد." : "Track orders and update statuses in one place."}</p></div><a className="admin-primary" href="/api/admin/export.csv">CSV ↓</a></div><section className="admin-panel orders-table-panel"><div className="orders-table">{orders.length === 0 ? <div className="empty-table">{lang === "ar" ? "لا توجد طلبات بعد" : "No orders yet"}</div> : orders.map((order) => <div className="order-row" key={String(order.id)}><span className="order-id">{String(order.order_number ?? "—")}</span><span>{String(order.full_name ?? "—")}</span><span>{String(order.city ?? "—")}</span><span className="order-amount">${(Number(order.total_cents ?? 0) / 100).toFixed(2)}</span><span className={order.suspicious ? "danger-pill" : "status-pill"}>{order.suspicious ? (lang === "ar" ? "مشبوه" : "Suspicious") : String(order.status ?? t.newOrder)}</span></div>)}</div></section></div>} {active === "shipping" && <AdminShipping arabic={lang === "ar"} t={{ shipping: t.shipping }} />} {active === "settings" && <AdminSettings arabic={lang === "ar"} primary={primary} secondary={secondary} onPrimaryChange={setPrimary} onSecondaryChange={setSecondary} />} {active === "landing" && <div className="empty-view"><span className="admin-eyebrow">LUMA / LANDING PAGE</span><h1>{t.landing}</h1><p>{lang === "ar" ? "تم تجهيز محرر المحتوى داخل صفحة المنتج، ويمكنك تحديث النصوص والباقات والصور مباشرة." : "The content editor is ready inside the product page for copy, bundles, and media."}</p><button className="admin-primary" onClick={() => setActive("product")}>{t.manageProduct}</button></div>}
-    </div></div>
-  </div>;
+  // بيانات حساب المشرف المخزنة
+  const [adminEmail, setAdminEmail] = useState("admin@store.com");
+  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [authSuccessMsg, setAuthSuccessMsg] = useState("");
+
+  // التبويب النشط
+  const [activeTab, setActiveTab] = useState<"settings" | "orders" | "security">("settings");
+
+  // إعدادات المتجر والطلبات
+  const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    // جلب بيانات الدخول المحفوظة
+    const savedEmail = localStorage.getItem("store_admin_email");
+    const savedPassword = localStorage.getItem("store_admin_password");
+    if (savedEmail) setAdminEmail(savedEmail);
+    if (savedPassword) setAdminPassword(savedPassword);
+
+    // فحص جلسة الدخول
+    if (sessionStorage.getItem("store_admin_session") === "true") {
+      setIsAuthenticated(true);
+    }
+
+    // جلب الإعدادات
+    const savedConfig = localStorage.getItem("store_config");
+    if (savedConfig) {
+      try {
+        setConfig(JSON.parse(savedConfig));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // جلب الطلبات
+    const savedOrders = localStorage.getItem("store_orders");
+    if (savedOrders) {
+      try {
+        setOrders(JSON.parse(savedOrders));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailInput.trim().toLowerCase() === adminEmail.toLowerCase() && passwordInput === adminPassword) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem("store_admin_session", "true");
+      setLoginError("");
+    } else {
+      setLoginError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("store_admin_session");
+    setIsAuthenticated(false);
+  };
+
+  const handleUpdateSecurity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || !newPassword) return;
+
+    localStorage.setItem("store_admin_email", newEmail.trim());
+    localStorage.setItem("store_admin_password", newPassword);
+    setAdminEmail(newEmail.trim());
+    setAdminPassword(newPassword);
+    setAuthSuccessMsg("تم تحديث بيانات الدخول بنجاح!");
+    setTimeout(() => setAuthSuccessMsg(""), 3000);
+  };
+
+  const handleSaveConfig = () => {
+    localStorage.setItem("store_config", JSON.stringify(config));
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  // شاشة تسجيل الدخول
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4 font-sans" dir="rtl">
+        <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl max-w-sm w-full space-y-6 shadow-2xl">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-amber-400">تسجيل دخول التاجر</h1>
+            <p className="text-xs text-neutral-400">أدخل بيانات الاعتماد لإدارة صفحة الهبوط</p>
+          </div>
+
+          {loginError && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-lg text-center font-medium">
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs text-neutral-300 font-semibold mb-1">البريد الإلكتروني</label>
+              <input
+                type="email"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="admin@store.com"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-left transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-300 font-semibold mb-1">كلمة المرور</label>
+              <input
+                type="password"
+                required
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-left transition"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl transition text-sm shadow-md"
+            >
+              دخول إلى اللوحة
+            </button>
+          </form>
+
+          <div className="text-center text-[11px] text-neutral-500 border-t border-neutral-800/80 pt-4">
+            البيانات الافتراضية للتجربة: <span className="text-neutral-300">admin@store.com</span> / <span className="text-neutral-300">admin123</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-16" dir="rtl">
+      {/* الهيدر العلوي */}
+      <header className="border-b border-neutral-800 bg-neutral-900 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="font-extrabold text-amber-400 text-lg tracking-tight">لوحة تحكم المتجر</span>
+            <span className="bg-neutral-800 text-neutral-400 text-xs px-2.5 py-0.5 rounded-full border border-neutral-700">
+              {config.storeName}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveConfig}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-sm transition shadow-sm"
+            >
+              {saveSuccess ? "✓ تم الحفظ!" : "حفظ التعديلات"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs px-3 py-1.5 rounded-lg transition"
+            >
+              خروج
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* التبويبات */}
+      <div className="max-w-5xl mx-auto px-4 mt-6">
+        <div className="flex gap-2 border-b border-neutral-800 pb-2">
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+              activeTab === "settings" ? "bg-amber-500 text-black" : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            إعدادات الصفحة والمنتج
+          </button>
+          <button
+            onClick={() => setActiveTab("orders")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+              activeTab === "orders" ? "bg-amber-500 text-black" : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            الطلبات المستلمة ({orders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("security")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+              activeTab === "security" ? "bg-amber-500 text-black" : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            بيانات الدخول والأمان
+          </button>
+        </div>
+
+        {/* 1. تبويب الإعدادات والصفحة */}
+        {activeTab === "settings" && (
+          <div className="mt-6 space-y-6">
+            {/* هوية المتجر */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">هوية المتجر والشعار</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">اسم المتجر</label>
+                  <input
+                    type="text"
+                    value={config.storeName}
+                    onChange={(e) => setConfig({ ...config, storeName: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">رابط الشعار / اللوجو (Logo URL)</label>
+                  <input
+                    type="text"
+                    value={config.logoUrl || ""}
+                    onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })}
+                    placeholder="اتركه فارغاً ليظهر اسم المتجر كنص أنيق"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-left"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* الشريط العلوي والمؤقت */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <h3 className="font-bold text-amber-400 text-base">شريط العرض والمؤقت التنازلي</h3>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                  <input
+                    type="checkbox"
+                    checked={config.showTopBar}
+                    onChange={(e) => setConfig({ ...config, showTopBar: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span>تفعيل الشريط العلوي</span>
+                </label>
+              </div>
+
+              {config.showTopBar && (
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">نص العرض الترويجي</label>
+                    <input
+                      type="text"
+                      value={config.topBarText}
+                      onChange={(e) => setConfig({ ...config, topBarText: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                      <input
+                        type="checkbox"
+                        checked={config.showTimer}
+                        onChange={(e) => setConfig({ ...config, showTimer: e.target.checked })}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      <span>تفعيل العداد التنازلي الوهمي</span>
+                    </label>
+                    {config.showTimer && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span>المدة (بالدقائق):</span>
+                        <input
+                          type="number"
+                          value={config.timerMinutes}
+                          onChange={(e) => setConfig({ ...config, timerMinutes: Number(e.target.value) })}
+                          className="w-20 bg-neutral-950 border border-neutral-800 rounded-lg p-1.5 text-center text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* تفاصيل المنتج والتسعير */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">بيانات المنتج والتسعير</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">عنوان / اسم المنتج الرئيسي</label>
+                  <input
+                    type="text"
+                    value={config.productTitle}
+                    onChange={(e) => setConfig({ ...config, productTitle: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">رابط صورة المنتج الرئيسية (Image URL)</label>
+                  <input
+                    type="text"
+                    value={config.productImage}
+                    onChange={(e) => setConfig({ ...config, productImage: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-left"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">السعر الحالي للقطعة</label>
+                    <input
+                      type="number"
+                      value={config.currentPrice}
+                      onChange={(e) => setConfig({ ...config, currentPrice: Number(e.target.value) })}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">السعر قبل الخصم (المشطوب)</label>
+                    <input
+                      type="number"
+                      value={config.oldPrice}
+                      onChange={(e) => setConfig({ ...config, oldPrice: Number(e.target.value) })}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">رمز العملة (مثلاً: د.أ / ج.م / ر.س)</label>
+                    <input
+                      type="text"
+                      value={config.currency}
+                      onChange={(e) => setConfig({ ...config, currency: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-center font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">نقاط المميزات السريعة (3 أسطر)</label>
+                  {config.features.map((feat, index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      value={feat}
+                      onChange={(e) => {
+                        const updated = [...config.features];
+                        updated[index] = e.target.value;
+                        setConfig({ ...config, features: updated });
+                      }}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm mb-2"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* باقات العروض (اختيارية) */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <h3 className="font-bold text-amber-400 text-base">باقات العروض والكميات (Bundles)</h3>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                  <input
+                    type="checkbox"
+                    checked={config.showBundles}
+                    onChange={(e) => setConfig({ ...config, showBundles: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span>تفعيل قسم باقات الكمية</span>
+                </label>
+              </div>
+
+              {config.showBundles && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  {config.bundles.map((bundle, idx) => (
+                    <div key={idx} className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg space-y-2 text-xs">
+                      <div className="font-bold text-neutral-200">باقة ({bundle.qty} قطع)</div>
+                      <div>
+                        <label className="block text-[10px] text-neutral-400">العنوان:</label>
+                        <input
+                          type="text"
+                          value={bundle.title}
+                          onChange={(e) => {
+                            const newBundles = [...config.bundles];
+                            newBundles[idx].title = e.target.value;
+                            setConfig({ ...config, bundles: newBundles });
+                          }}
+                          className="w-full bg-neutral-900 border border-neutral-800 rounded p-1.5 mt-0.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-neutral-400">السعر الإجمالي:</label>
+                        <input
+                          type="number"
+                          value={bundle.price}
+                          onChange={(e) => {
+                            const newBundles = [...config.bundles];
+                            newBundles[idx].price = Number(e.target.value);
+                            setConfig({ ...config, bundles: newBundles });
+                          }}
+                          className="w-full bg-neutral-900 border border-neutral-800 rounded p-1.5 mt-0.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-neutral-400">شارة مميزة (اختياري):</label>
+                        <input
+                          type="text"
+                          value={bundle.badge || ""}
+                          onChange={(e) => {
+                            const newBundles = [...config.bundles];
+                            newBundles[idx].badge = e.target.value;
+                            setConfig({ ...config, bundles: newBundles });
+                          }}
+                          placeholder="مثلاً: الأكثر طلباً"
+                          className="w-full bg-neutral-900 border border-neutral-800 rounded p-1.5 mt-0.5"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* شارة الضمان / المعاينة (اختيارية) */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <h3 className="font-bold text-amber-400 text-base">شارة الضمان أو المعاينة قبل الدفع</h3>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                  <input
+                    type="checkbox"
+                    checked={config.showGuarantee}
+                    onChange={(e) => setConfig({ ...config, showGuarantee: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span>تفعيل الشارة</span>
+                </label>
+              </div>
+
+              {config.showGuarantee && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">نص الشارة الأساسي</label>
+                    <input
+                      type="text"
+                      value={config.guaranteeText}
+                      onChange={(e) => setConfig({ ...config, guaranteeText: e.target.value })}
+                      placeholder="مثلاً: معاينة مجانية للمنتج قبل الاستلام والدفع"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1">نص فرعي إضافي</label>
+                    <input
+                      type="text"
+                      value={config.guaranteeSubtext || ""}
+                      onChange={(e) => setConfig({ ...config, guaranteeSubtext: e.target.value })}
+                      placeholder="مثلاً: إن لم يعجبك المنتج فلن تدفع أي رسوم"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* رقم استلام الطلبات عبر الواتساب */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">استقبال الطلبات على الواتساب</h3>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                  رقم الواتساب مع رمز الدولة (مثال: 201012345678+ أو 966501234567+)
+                </label>
+                <input
+                  type="text"
+                  value={config.whatsappNumber}
+                  onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })}
+                  placeholder="+962790000000"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-left font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. تبويب الطلبات المستلمة */}
+        {activeTab === "orders" && (
+          <div className="mt-6">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
+                <h3 className="font-bold text-amber-400 text-base">سجل الطلبات الحالية</h3>
+                {orders.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm("هل أنت متأكد من مسح جميع الطلبات؟")) {
+                        localStorage.removeItem("store_orders");
+                        setOrders([]);
+                      }
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 underline"
+                  >
+                    مسح السجل
+                  </button>
+                )}
+              </div>
+
+              {orders.length === 0 ? (
+                <div className="text-center py-10 text-neutral-500 text-sm">لا توجد طلبات مسجلة حتى الآن</div>
+              ) : (
+                <div className="divide-y divide-neutral-800">
+                  {orders.map((order, idx) => (
+                    <div key={idx} className="py-4 space-y-2 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-neutral-200">{order.fullName}</span>
+                        <span className="text-amber-400 font-bold">
+                          {order.total} {order.currency}
+                        </span>
+                      </div>
+                      <div className="text-xs text-neutral-400 flex flex-wrap gap-4">
+                        <span>الهاتف: <b className="text-neutral-200">{order.phone}</b></span>
+                        {order.altPhone && <span>بديل: <b className="text-neutral-200">{order.altPhone}</b></span>}
+                        <span>المحافظة: <b className="text-neutral-200">{order.governorate}</b></span>
+                        <span>الكمية: <b className="text-neutral-200">{order.qty}</b></span>
+                      </div>
+                      <div className="text-xs text-neutral-300">
+                        <span>العنوان: </span>{order.address}
+                      </div>
+                      {order.notes && (
+                        <div className="text-xs text-neutral-400 italic">
+                          <span>ملاحظات: </span>{order.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 3. تبويب الأمان وبيانات الدخول */}
+        {activeTab === "security" && (
+          <div className="mt-6 max-w-md">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
+              <h3 className="font-bold text-amber-400 text-base border-b border-neutral-800 pb-2">
+                تغيير البريد الإلكتروني وكلمة المرور
+              </h3>
+
+              {authSuccessMsg && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs p-3 rounded-lg text-center font-medium">
+                  {authSuccessMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateSecurity} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">البريد الإلكتروني الجديد</label>
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder={adminEmail}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-left"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">كلمة المرور الجديدة</label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm text-left"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg text-sm transition"
+                >
+                  حفظ بيانات الدخول الجديدة
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
