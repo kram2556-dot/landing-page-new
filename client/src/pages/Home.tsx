@@ -75,49 +75,61 @@ export interface StoreConfig {
   tiktokPixelId: string;
 }
 
-// ألوان وقوالب الثيمات الشاملة حسب نوع المنتج
-const THEME_STYLES: Record<ThemeType, { bg: string; cardBg: string; text: string; accent: string; border: string }> = {
+// باليتات الألوان الفاخرة والمدروسة عالمياً
+const THEME_STYLES: Record<ThemeType, { bg: string; cardBg: string; text: string; accent: string; btnText: string; border: string }> = {
+  // طبي وعلاجي: أبيض عاجي هادئ ونظيف جداً مع أزرق كلينيكال عميق
   medical: {
     bg: "#f8fafc",
     cardBg: "#ffffff",
     text: "#0f172a",
     accent: "#0284c7",
+    btnText: "#ffffff",
     border: "#e2e8f0"
   },
+  // أحذية ورياضة: أسود مطفي فاخر (Matte Obsidian) مع برتقالي عنبري دافئ (Nike Style)
   sneakers: {
-    bg: "#0a0a0a",
-    cardBg: "#171717",
-    text: "#f5f5f5",
-    accent: "#f97316",
-    border: "#262626"
+    bg: "#0c0d0e",
+    cardBg: "#16181a",
+    text: "#f8fafc",
+    accent: "#f59e0b",
+    btnText: "#000000",
+    border: "#26292d"
   },
+  // ملابس وأزياء فاخرة: رمادي دافئ صامت مع بني كراميل كلاسيكي
   fashion: {
-    bg: "#1c1917",
-    cardBg: "#292524",
-    text: "#fafaf9",
+    bg: "#18181b",
+    cardBg: "#242427",
+    text: "#fdfbf7",
     accent: "#d97706",
-    border: "#44403c"
+    btnText: "#ffffff",
+    border: "#3a3a3e"
   },
+  // عطور وتجميل: أسود ملكي فخم مع وردي مغبر راقي (Dusty Rose Gold بديل الفوشيا النيون)
   perfume: {
-    bg: "#09090b",
-    cardBg: "#18181b",
+    bg: "#0f0f12",
+    cardBg: "#18181f",
     text: "#fafafa",
-    accent: "#ec4899",
-    border: "#27272a"
+    accent: "#e08d9d",
+    btnText: "#0f0f12",
+    border: "#2b2b36"
   },
+  // أدوات منزلية وتكنولوجيا: كحلي ليلي مكتوم مع تيتانيوم أزرق
   home: {
-    bg: "#0b0f19",
-    cardBg: "#111827",
-    text: "#f9fafb",
-    accent: "#3b82f6",
-    border: "#1f2937"
+    bg: "#090d16",
+    cardBg: "#101726",
+    text: "#f1f5f9",
+    accent: "#2563eb",
+    btnText: "#ffffff",
+    border: "#1e293b"
   },
+  // طبيعة وألعاب وعناية: رمادي فاتح مريح يبرز المنتج مع أخضر زمردي هادئ
   kids: {
-    bg: "#064e3b",
-    cardBg: "#065f46",
-    text: "#ffffff",
-    accent: "#10b981",
-    border: "#047857"
+    bg: "#f4f6f4",
+    cardBg: "#ffffff",
+    text: "#141f17",
+    accent: "#15803d",
+    btnText: "#ffffff",
+    border: "#e2e8e2"
   }
 };
 
@@ -234,7 +246,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [config.showTimer]);
 
-  // إشعار الشراء اللحظي
+  // محاكاة إشعار الشراء اللحظي
   useEffect(() => {
     if (!config.showRecentSales) return;
     const activeC = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
@@ -331,8 +343,8 @@ export default function Home() {
           </div>
           <button
             onClick={() => setOrderSuccess(false)}
-            style={{ backgroundColor: theme.accent }}
-            className="w-full text-black font-bold py-3 rounded-xl transition"
+            style={{ backgroundColor: theme.accent, color: theme.btnText }}
+            className="w-full font-bold py-3 rounded-xl transition shadow-md"
           >
             العودة للمتجر
           </button>
@@ -345,11 +357,11 @@ export default function Home() {
     <div style={{ backgroundColor: theme.bg, color: theme.text }} className="min-h-screen font-sans pb-24 transition-colors duration-300" dir="rtl">
       {/* شريط الإعلان */}
       {config.showTopBar && (
-        <div style={{ backgroundColor: theme.accent }} className="text-black py-2 px-4 text-xs sm:text-sm font-bold text-center sticky top-0 z-50 shadow-md">
+        <div style={{ backgroundColor: theme.accent, color: theme.btnText }} className="py-2.5 px-4 text-xs sm:text-sm font-bold text-center sticky top-0 z-50 shadow-md">
           <div className="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-6">
             <span>{config.topBarText}</span>
             {config.showTimer && (
-              <span className="bg-black/80 text-white px-2 py-0.5 rounded font-mono text-xs">
+              <span className="bg-black/60 text-white px-2 py-0.5 rounded font-mono text-xs shadow-inner">
                 {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
               </span>
             )}
@@ -358,7 +370,7 @@ export default function Home() {
       )}
 
       {/* الهيدر */}
-      <header style={{ borderColor: theme.border }} className="border-b bg-black/20 backdrop-blur-md sticky top-8 z-40">
+      <header style={{ borderColor: theme.border }} className="border-b bg-black/10 backdrop-blur-md sticky top-8 z-40">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             {config.logoUrl ? (
@@ -369,8 +381,8 @@ export default function Home() {
           </div>
           <button
             onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent }}
-            className="text-black font-bold px-4 py-1.5 rounded-lg text-xs sm:text-sm"
+            style={{ backgroundColor: theme.accent, color: theme.btnText }}
+            className="font-bold px-4 py-1.5 rounded-lg text-xs sm:text-sm shadow-sm"
           >
             اطلب الآن
           </button>
@@ -398,10 +410,10 @@ export default function Home() {
                 <span className="text-red-500">سارع بالطلب! الكمية المتبقية محدودة</span>
                 <span style={{ color: theme.accent }}>{config.stockLeft} قطع متبقية</span>
               </div>
-              <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
                 <div
                   style={{ width: `${Math.min(100, Math.max(15, config.stockLeft * 10))}%`, backgroundColor: theme.accent }}
-                  className="h-full rounded-full"
+                  className="h-full rounded-full transition-all duration-500"
                 />
               </div>
             </div>
@@ -415,7 +427,7 @@ export default function Home() {
 
         {/* المقاسات والألوان */}
         {(config.enableSizes || config.enableColors) && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-4">
+          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-4 shadow-sm">
             {config.enableSizes && config.sizes && (
               <div className="space-y-2">
                 <label className="block text-xs font-bold opacity-80">
@@ -433,9 +445,9 @@ export default function Home() {
                         onClick={() => setSelectedSize(size)}
                         style={{
                           borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? `${theme.accent}20` : "transparent"
+                          backgroundColor: active ? `${theme.accent}25` : "transparent"
                         }}
-                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold"
+                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition"
                       >
                         {size}
                       </button>
@@ -462,9 +474,9 @@ export default function Home() {
                         onClick={() => setSelectedColor(col)}
                         style={{
                           borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? `${theme.accent}20` : "transparent"
+                          backgroundColor: active ? `${theme.accent}25` : "transparent"
                         }}
-                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold"
+                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition"
                       >
                         {col}
                       </button>
@@ -477,7 +489,7 @@ export default function Home() {
         )}
 
         {/* نقاط المميزات */}
-        <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-2.5">
+        <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-2.5 shadow-sm">
           <h3 style={{ color: theme.accent }} className="font-bold text-sm">مميزات المنتج:</h3>
           <ul className="space-y-2 text-xs sm:text-sm opacity-90">
             {config.features.map((f, i) => (
@@ -523,10 +535,10 @@ export default function Home() {
                       borderColor: isSelected ? theme.accent : theme.border,
                       backgroundColor: isSelected ? `${theme.accent}15` : theme.cardBg
                     }}
-                    className="cursor-pointer border-2 rounded-xl p-4 text-center relative transition"
+                    className="cursor-pointer border-2 rounded-xl p-4 text-center relative transition shadow-sm"
                   >
                     {b.badge && (
-                      <span style={{ backgroundColor: theme.accent }} className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                      <span style={{ backgroundColor: theme.accent, color: theme.btnText }} className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm">
                         {b.badge}
                       </span>
                     )}
@@ -534,7 +546,7 @@ export default function Home() {
                     <p style={{ color: theme.accent }} className="text-xl font-black my-1">
                       {b.price} {activeCountry.currency}
                     </p>
-                    {b.savings && <p className="text-[11px] text-emerald-400 font-semibold">{b.savings} {activeCountry.currency}</p>}
+                    {b.savings && <p className="text-[11px] text-emerald-500 font-semibold">{b.savings} {activeCountry.currency}</p>}
                   </div>
                 );
               })}
@@ -650,7 +662,7 @@ export default function Home() {
               </div>
               <div className="flex justify-between opacity-70">
                 <span>مصاريف الشحن:</span>
-                <span className={shippingCost === 0 ? "text-emerald-400 font-bold" : ""}>
+                <span className={shippingCost === 0 ? "text-emerald-500 font-bold" : ""}>
                   {shippingCost === 0 ? "مجاناً" : `${shippingCost} ${activeCountry.currency}`}
                 </span>
               </div>
@@ -665,8 +677,8 @@ export default function Home() {
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{ backgroundColor: theme.accent }}
-              className="w-full text-black font-extrabold text-sm sm:text-base py-3.5 rounded-xl shadow-lg transition"
+              style={{ backgroundColor: theme.accent, color: theme.btnText }}
+              className="w-full font-extrabold text-sm sm:text-base py-3.5 rounded-xl shadow-lg transition"
             >
               {isSubmitting ? "جاري تأكيد طلبك..." : "تأكيد الطلب — الدفع عند الاستلام بعد المعاينة"}
             </button>
@@ -675,7 +687,7 @@ export default function Home() {
 
         {/* الضمان */}
         {config.showGuarantee && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-xl p-4 flex items-center gap-3">
+          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-xl p-4 flex items-center gap-3 shadow-sm">
             <div style={{ color: theme.accent }} className="text-2xl flex-shrink-0">🛡️</div>
             <div>
               <p className="font-bold text-xs sm:text-sm">{config.guaranteeText}</p>
@@ -690,7 +702,7 @@ export default function Home() {
             <h3 className="font-bold text-sm opacity-90">تجارب وآراء المشترين:</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {config.reviews.map((r, i) => (
-                <div key={i} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border p-3.5 rounded-xl space-y-1">
+                <div key={i} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border p-3.5 rounded-xl space-y-1 shadow-sm">
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-bold">{r.name}</span>
                     <span style={{ color: theme.accent }}>{"★".repeat(r.rating)}</span>
@@ -716,13 +728,13 @@ export default function Home() {
         </div>
       )}
 
-      {/* أيقونة واتساب الدعم العائمة */}
+      {/* أيقونة واتساب الدعم العائمة - مع إطار أبيض وظل بارز للظهور فوق أي خلفية */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
           href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، لدي استفسار بخصوص المنتج")}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-20 right-4 z-50 w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl transition transform hover:scale-110"
+          className="fixed bottom-20 right-4 z-50 w-13 h-13 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-2 border-white/80 transition transform hover:scale-110"
           title="تواصل مع الدعم عبر واتساب"
         >
           <span className="text-2xl font-bold">💬</span>
@@ -731,11 +743,11 @@ export default function Home() {
 
       {/* زر الشراء العائم للموبايل */}
       {config.showStickyButton && (
-        <div style={{ backgroundColor: `${theme.bg}ee`, borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden z-40">
+        <div style={{ backgroundColor: `${theme.bg}f2`, borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden z-40">
           <button
             onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent }}
-            className="w-full text-black font-extrabold py-3 rounded-xl shadow-lg text-sm"
+            style={{ backgroundColor: theme.accent, color: theme.btnText }}
+            className="w-full font-extrabold py-3 rounded-xl shadow-lg text-sm"
           >
             اطلب الآن — الدفع عند الاستلام ({config.currentPrice} {activeCountry.currency})
           </button>
