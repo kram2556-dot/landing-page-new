@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export type ThemeType = "medical" | "sneakers" | "fashion" | "perfume" | "home" | "kids";
+export type ThemeType = "royal" | "obsidian" | "silk" | "clinical";
 
 export interface ProvinceItem {
   id: string;
@@ -75,61 +75,65 @@ export interface StoreConfig {
   tiktokPixelId: string;
 }
 
-// باليتات الألوان الفاخرة والمدروسة عالمياً
-const THEME_STYLES: Record<ThemeType, { bg: string; cardBg: string; text: string; accent: string; btnText: string; border: string }> = {
-  // طبي وعلاجي: أبيض عاجي هادئ ونظيف جداً مع أزرق كلينيكال عميق
-  medical: {
-    bg: "#f8fafc",
+// باليتات نظام الـ Luxury Editorial System المستوحاة من LUMA
+const EDITORIAL_THEMES: Record<ThemeType, {
+  bgGradient: string;
+  glowColor: string;
+  cardBg: string;
+  cardBorder: string;
+  accentGold: string;
+  accentText: string;
+  textMain: string;
+  textMuted: string;
+  divider: string;
+}> = {
+  // 1. Royal Amber: بنفسجي ليلي غامق مع ذهب شمبانيا مطفي (للعطور والتجميل)
+  royal: {
+    bgGradient: "radial-gradient(circle at 50% 15%, #241335 0%, #0c0714 65%, #07040c 100%)",
+    glowColor: "rgba(223, 186, 115, 0.15)",
+    cardBg: "rgba(24, 16, 36, 0.75)",
+    cardBorder: "rgba(223, 186, 115, 0.2)",
+    accentGold: "#dfba73",
+    accentText: "#0c0714",
+    textMain: "#faf7f2",
+    textMuted: "#a599b5",
+    divider: "rgba(255, 255, 255, 0.08)"
+  },
+  // 2. Obsidian Ember: أسود كربوني مع برتقالي نحاسي دافئ (للأحذية والتقنية)
+  obsidian: {
+    bgGradient: "radial-gradient(circle at 50% 15%, #1a2332 0%, #0c0e12 65%, #060709 100%)",
+    glowColor: "rgba(229, 138, 60, 0.15)",
+    cardBg: "rgba(21, 27, 36, 0.75)",
+    cardBorder: "rgba(229, 138, 60, 0.25)",
+    accentGold: "#e58a3c",
+    accentText: "#0c0e12",
+    textMain: "#f8fafc",
+    textMuted: "#8b9bb4",
+    divider: "rgba(255, 255, 255, 0.08)"
+  },
+  // 3. Cashmere Silk: إسبريسو ورمادي دافئ مع برونزي توسكاني (للأزياء الفاخرة)
+  silk: {
+    bgGradient: "radial-gradient(circle at 50% 15%, #2a221c 0%, #110f0e 65%, #080706 100%)",
+    glowColor: "rgba(212, 163, 115, 0.15)",
+    cardBg: "rgba(28, 24, 20, 0.75)",
+    cardBorder: "rgba(212, 163, 115, 0.22)",
+    accentGold: "#d4a373",
+    accentText: "#110f0e",
+    textMain: "#faf8f5",
+    textMuted: "#a89c91",
+    divider: "rgba(255, 255, 255, 0.08)"
+  },
+  // 4. Pure Clinical: أبيض عاجي سريري مع أزرق ملكي ياقوتي (للطب والعناية)
+  clinical: {
+    bgGradient: "radial-gradient(circle at 50% 15%, #f1f5f9 0%, #f8fafc 65%, #ffffff 100%)",
+    glowColor: "rgba(30, 58, 138, 0.06)",
     cardBg: "#ffffff",
-    text: "#0f172a",
-    accent: "#0284c7",
-    btnText: "#ffffff",
-    border: "#e2e8f0"
-  },
-  // أحذية ورياضة: أسود مطفي فاخر (Matte Obsidian) مع برتقالي عنبري دافئ (Nike Style)
-  sneakers: {
-    bg: "#0c0d0e",
-    cardBg: "#16181a",
-    text: "#f8fafc",
-    accent: "#f59e0b",
-    btnText: "#000000",
-    border: "#26292d"
-  },
-  // ملابس وأزياء فاخرة: رمادي دافئ صامت مع بني كراميل كلاسيكي
-  fashion: {
-    bg: "#18181b",
-    cardBg: "#242427",
-    text: "#fdfbf7",
-    accent: "#d97706",
-    btnText: "#ffffff",
-    border: "#3a3a3e"
-  },
-  // عطور وتجميل: أسود ملكي فخم مع وردي مغبر راقي (Dusty Rose Gold بديل الفوشيا النيون)
-  perfume: {
-    bg: "#0f0f12",
-    cardBg: "#18181f",
-    text: "#fafafa",
-    accent: "#e08d9d",
-    btnText: "#0f0f12",
-    border: "#2b2b36"
-  },
-  // أدوات منزلية وتكنولوجيا: كحلي ليلي مكتوم مع تيتانيوم أزرق
-  home: {
-    bg: "#090d16",
-    cardBg: "#101726",
-    text: "#f1f5f9",
-    accent: "#2563eb",
-    btnText: "#ffffff",
-    border: "#1e293b"
-  },
-  // طبيعة وألعاب وعناية: رمادي فاتح مريح يبرز المنتج مع أخضر زمردي هادئ
-  kids: {
-    bg: "#f4f6f4",
-    cardBg: "#ffffff",
-    text: "#141f17",
-    accent: "#15803d",
-    btnText: "#ffffff",
-    border: "#e2e8e2"
+    cardBorder: "#cbd5e1",
+    accentGold: "#1e3a8a",
+    accentText: "#ffffff",
+    textMain: "#0f172a",
+    textMuted: "#64748b",
+    divider: "rgba(15, 23, 42, 0.08)"
   }
 };
 
@@ -148,11 +152,11 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 };
 
 const DEFAULT_CONFIG: StoreConfig = {
-  storeName: "متجر النخبة",
+  storeName: "L U M A",
   logoUrl: "",
-  selectedTheme: "sneakers",
+  selectedTheme: "royal",
   showTopBar: true,
-  topBarText: "عرض خاص لفترة محدودة — شحن سريع ومعاينة قبل الدفع",
+  topBarText: "شحن مجاني لأول 100 طلب • ضمان استرجاع حقيقي ومعاينة مجانية",
   showTimer: true,
   timerMinutes: 15,
   showStockBar: true,
@@ -163,26 +167,32 @@ const DEFAULT_CONFIG: StoreConfig = {
   supportWhatsappNumber: "+201000000000",
   activeCountry: "EG",
   countries: DEFAULT_COUNTRIES,
-  productTitle: "حذاء مريح وخفيف للجري والمشي الطويل",
+  productTitle: "الشيء الصغير الذي يغير مزاج يومك.",
   productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
   gallery: [],
-  currentPrice: 350,
-  oldPrice: 550,
-  features: ["خامة مرنة تسمح بالتهوية ومقاومة للتعرق", "نعل مانع للانزلاق مريح للوقوف الطويل", "معاينة مجانية للمقاس قبل الدفع"],
+  currentPrice: 320,
+  oldPrice: 500,
+  features: [
+    "تصميم استثنائي يجمع بين الهدوء والرفاهية المطلقة",
+    "خامات مختارة بعناية فائقة تدوم طويلاً وتمنحك الثقة",
+    "معاينة وقياس مجاني بالكامل قبل دفع أي مليم للمندوب"
+  ],
   enableSizes: true,
   sizes: "41, 42, 43, 44, 45",
   enableColors: true,
-  colors: "أسود, كحلي, رمادي",
+  colors: "أسود ملكي, رمادي دخاني, كحلي ليل",
   showBundles: true,
   bundles: [
-    { qty: 1, title: "قطعة واحدة", price: 350 },
-    { qty: 2, title: "قطعتان (عرض مميز)", price: 620, badge: "الأكثر طلباً", savings: "وفر 80" }
+    { qty: 1, title: "قطعة واحدة", price: 320 },
+    { qty: 2, title: "قطعتان (باقة التميز)", price: 580, badge: "الأكثر طلباً", savings: "وفر 60" }
   ],
   showGuarantee: true,
-  guaranteeText: "معاينة وقياس المنتج مجاناً قبل الاستلام والدفع للمندوب",
-  guaranteeSubtext: "إن لم يناسبك المقاس يمكنك الإرجاع فوراً دون دفع أي مصاريف",
+  guaranteeText: "معاينة مجانية كاملة عند باب منزلك قبل السداد",
+  guaranteeSubtext: "يحق لك فحص الجودة وتجربة المنتج مع المندوب دون أي التزام",
   showReviews: true,
-  reviews: [{ name: "أحمد م.", comment: "ممتاز جداً وخامته فاخرة ومريح في الوقوف.", rating: 5 }],
+  reviews: [
+    { name: "سارة م.", comment: "القطعة في الحقيقة أفخم بمراحل من الصور، إحساس فاخر جداً.", rating: 5 }
+  ],
   whatsappNumber: "+201000000000",
   metaPixelId: "",
   tiktokPixelId: ""
@@ -195,7 +205,7 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedProvince, setSelectedProvince] = useState<string>("");
 
-  const [timeLeft, setTimeLeft] = useState({ minutes: 14, seconds: 59 });
+  const [timeLeft, setTimeLeft] = useState({ minutes: 11, seconds: 40 });
   const [recentSale, setRecentSale] = useState<{ name: string; city: string } | null>(null);
 
   const [fullName, setFullName] = useState("");
@@ -207,11 +217,29 @@ export default function Home() {
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
+    // تحميل خط فاخر ملكي ديناميكياً
+    const link = document.createElement("link");
+    link.href = "https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@300;400;500;700;900&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+
     const saved = localStorage.getItem("store_config");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const merged: StoreConfig = { ...DEFAULT_CONFIG, ...parsed, countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) } };
+        // التوافق مع المفاتيح القديمة أو الجديدة
+        let themeKey = parsed.selectedTheme;
+        if (themeKey === "sneakers") themeKey = "obsidian";
+        if (themeKey === "perfume") themeKey = "royal";
+        if (themeKey === "medical") themeKey = "clinical";
+        if (themeKey === "fashion" || themeKey === "home" || themeKey === "kids") themeKey = "silk";
+
+        const merged: StoreConfig = {
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          selectedTheme: themeKey || "royal",
+          countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
+        };
         setConfig(merged);
 
         if (merged.enableSizes && merged.sizes) {
@@ -228,7 +256,7 @@ export default function Home() {
       }
     } else {
       setSelectedSize("42");
-      setSelectedColor("أسود");
+      setSelectedColor("أسود ملكي");
       setSelectedProvince("القاهرة");
     }
   }, []);
@@ -240,33 +268,34 @@ export default function Home() {
       setTimeLeft((prev) => {
         if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
         if (prev.minutes > 0) return { minutes: prev.minutes - 1, seconds: 59 };
-        return { minutes: 14, seconds: 59 };
+        return { minutes: 11, seconds: 40 };
       });
     }, 1000);
     return () => clearInterval(timer);
   }, [config.showTimer]);
 
-  // محاكاة إشعار الشراء اللحظي
+  // إشعار الشراء اللحظي
   useEffect(() => {
     if (!config.showRecentSales) return;
     const activeC = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
     const provs = activeC.provinces?.filter((p) => p.enabled).map((p) => p.name) || ["المدينة"];
-    const names = ["محمد", "أحمد", "محمود", "خالد", "عبدالله", "يوسف", "عمر"];
+    const names = ["عبدالرحمن", "عمر", "كريم", "ياسين", "خالد", "مريم", "نور"];
 
     const interval = setInterval(() => {
       const rName = names[Math.floor(Math.random() * names.length)];
       const rCity = provs[Math.floor(Math.random() * provs.length)];
       setRecentSale({ name: rName, city: rCity });
       setTimeout(() => setRecentSale(null), 5000);
-    }, 20000);
+    }, 24000);
 
     return () => clearInterval(interval);
   }, [config.showRecentSales, config.activeCountry, config.countries]);
 
-  const theme = THEME_STYLES[config.selectedTheme] || THEME_STYLES.sneakers;
+  const currentThemeKey = (EDITORIAL_THEMES[config.selectedTheme] ? config.selectedTheme : "royal") as ThemeType;
+  const theme = EDITORIAL_THEMES[currentThemeKey];
+
   const activeCountry = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
   const enabledProvinces = activeCountry.provinces?.filter((p) => p.enabled) || [];
-
   const activeProvObj = enabledProvinces.find((p) => p.name === selectedProvince);
   const shippingCost = activeProvObj ? activeProvObj.shippingCost : 0;
 
@@ -321,32 +350,34 @@ export default function Home() {
       if (config.enableSizes && selectedSize) spec += `%0A- المقاس: ${selectedSize}`;
       if (config.enableColors && selectedColor) spec += `%0A- اللون: ${selectedColor}`;
 
-      const msg = `طلب جديد:%0A- الاسم: ${fullName}%0A- الدولة: ${activeCountry.name}%0A- المحافظة: ${selectedProvince}%0A- العنوان: ${address}${spec}%0A- الكمية: ${selectedQty}%0A- الإجمالي مع الشحن: ${finalTotal} ${activeCountry.currency}%0A- الهاتف: ${phone}${altPhone ? ` (%D8%A8%D8%AF%D9%8A%D9%84: ${altPhone})` : ""}${notes ? `%0A- ملاحظات: ${notes}` : ""}`;
+      const msg = `طلب جديد فخم:%0A- الاسم: ${fullName}%0A- الدولة: ${activeCountry.name}%0A- المحافظة: ${selectedProvince}%0A- العنوان: ${address}${spec}%0A- الكمية: ${selectedQty}%0A- الإجمالي: ${finalTotal} ${activeCountry.currency}%0A- الهاتف: ${phone}${altPhone ? ` (بديل: ${altPhone})` : ""}${notes ? `%0A- ملاحظات: ${notes}` : ""}`;
       const cleanPhone = config.whatsappNumber.replace(/[^0-9]/g, "");
       window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
     }
   };
 
+  // شاشة الشكر الملكية (Order Received) المستوحاة من الصورة الثانية
   if (orderSuccess) {
     return (
-      <div style={{ backgroundColor: theme.bg, color: theme.text }} className="min-h-screen flex items-center justify-center p-4 font-sans" dir="rtl">
-        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border p-8 rounded-2xl max-w-md w-full text-center space-y-4 shadow-2xl">
-          <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
+      <div style={{ background: theme.bgGradient, color: theme.textMain, fontFamily: "'Tajawal', sans-serif" }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
+        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder }} className="border backdrop-blur-xl p-8 rounded-3xl max-w-sm w-full text-center space-y-5 shadow-2xl">
+          <div style={{ backgroundColor: theme.accentGold, color: theme.accentText }} className="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-lg">
             ✓
           </div>
-          <h2 className="text-2xl font-bold">تم تأكيد طلبك بنجاح!</h2>
-          <p className="text-sm opacity-80 leading-relaxed">
-            شكراً لك يا {fullName}. سنتواصل معك لتأكيد موعد المعاينة والتسليم.
+          <p style={{ color: theme.accentGold }} className="text-[11px] font-mono tracking-widest uppercase">ORDER RECEIVED</p>
+          <h2 style={{ fontFamily: "'Amiri', serif" }} className="text-3xl font-bold">طلبك في طريقه إلينا.</h2>
+          <p style={{ color: theme.textMuted }} className="text-xs leading-relaxed">
+            شكراً لثقتك يا {fullName}. سيتواصل معك فريق {config.storeName} قريباً لتأكيد بيانات الطلب وموعد الوصول. لا تحتاج إلى دفع مسبق.
           </p>
-          <div style={{ borderColor: theme.border }} className="p-3 rounded-xl border text-xs">
-            الإجمالي عند الاستلام: <b className="text-sm" style={{ color: theme.accent }}>{finalTotal} {activeCountry.currency}</b>
+          <div style={{ borderColor: theme.divider }} className="border-t pt-4 text-xs">
+            المستحق عند المعاينة: <b style={{ color: theme.accentGold }} className="text-base">{finalTotal} {activeCountry.currency}</b>
           </div>
           <button
             onClick={() => setOrderSuccess(false)}
-            style={{ backgroundColor: theme.accent, color: theme.btnText }}
-            className="w-full font-bold py-3 rounded-xl transition shadow-md"
+            style={{ borderColor: theme.cardBorder, color: theme.textMain }}
+            className="w-full border py-3 rounded-2xl text-xs hover:bg-white/5 transition flex items-center justify-center gap-2"
           >
-            العودة للمتجر
+            <span>↑ العودة إلى البداية</span>
           </button>
         </div>
       </div>
@@ -354,84 +385,127 @@ export default function Home() {
   }
 
   return (
-    <div style={{ backgroundColor: theme.bg, color: theme.text }} className="min-h-screen font-sans pb-24 transition-colors duration-300" dir="rtl">
-      {/* شريط الإعلان */}
+    <div style={{ background: theme.bgGradient, color: theme.textMain, fontFamily: "'Tajawal', sans-serif" }} className="min-h-screen pb-28 selection:bg-amber-500/30 transition-all duration-500" dir="rtl">
+      
+      {/* 1. شريط الإعلان العلوي الرفيع والأنيق جداً */}
       {config.showTopBar && (
-        <div style={{ backgroundColor: theme.accent, color: theme.btnText }} className="py-2.5 px-4 text-xs sm:text-sm font-bold text-center sticky top-0 z-50 shadow-md">
-          <div className="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-6">
-            <span>{config.topBarText}</span>
-            {config.showTimer && (
-              <span className="bg-black/60 text-white px-2 py-0.5 rounded font-mono text-xs shadow-inner">
-                {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
-              </span>
-            )}
-          </div>
+        <div style={{ backgroundColor: theme.accentGold, color: theme.accentText }} className="py-2 px-4 text-xs font-bold text-center sticky top-0 z-50 shadow-sm flex items-center justify-center gap-3">
+          <button onClick={scrollToCheckout} className="flex items-center gap-1 font-black underline underline-offset-4 hover:opacity-80 transition text-[11px]">
+            <span>اطلب الآن ←</span>
+          </button>
+          <span className="opacity-90">• {config.topBarText} •</span>
+          {config.showTimer && (
+            <span className="font-mono text-[11px] font-black tracking-wider bg-black/20 px-2 py-0.5 rounded">
+              {String(timeLeft.minutes).padStart(2, "0")} : {String(timeLeft.seconds).padStart(2, "0")}
+            </span>
+          )}
         </div>
       )}
 
-      {/* الهيدر */}
-      <header style={{ borderColor: theme.border }} className="border-b bg-black/10 backdrop-blur-md sticky top-8 z-40">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={config.storeName} className="h-9 object-contain" />
-            ) : (
-              <span style={{ color: theme.accent }} className="text-xl font-black">{config.storeName}</span>
-            )}
+      {/* 2. الهيدر المينيمال المفرغ (Minimal Nav) */}
+      <header style={{ borderColor: theme.divider }} className="border-b backdrop-blur-md sticky top-8 z-40 bg-black/10">
+        <div className="max-w-3xl mx-auto px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span style={{ borderColor: theme.accentGold, color: theme.accentGold }} className="w-8 h-8 rounded-full border flex items-center justify-center font-serif text-sm font-bold shadow-sm">
+              {config.storeName.charAt(0)}
+            </span>
+            <span className="font-bold tracking-widest text-sm uppercase">{config.storeName}</span>
           </div>
           <button
             onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent, color: theme.btnText }}
-            className="font-bold px-4 py-1.5 rounded-lg text-xs sm:text-sm shadow-sm"
+            style={{ backgroundColor: theme.accentGold, color: theme.accentText }}
+            className="font-bold px-4 py-1.5 rounded-full text-xs shadow-md hover:opacity-90 transition"
           >
-            اطلب الآن
+            امتلكه الآن ←
           </button>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-7">
-        {/* تفاصيل المنتج والأسعار */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-extrabold">{config.productTitle}</h1>
-          <div className="flex items-center justify-center gap-3">
-            <span style={{ color: theme.accent }} className="text-3xl font-black">
-              {config.currentPrice} {activeCountry.currency}
-            </span>
-            {config.oldPrice > config.currentPrice && (
-              <span className="opacity-50 line-through text-lg">
-                {config.oldPrice} {activeCountry.currency}
-              </span>
-            )}
+      <main className="max-w-2xl mx-auto px-5 pt-8 space-y-9">
+        
+        {/* 3. العنوان الافتتاحي الملكي والعبارة الشاعرية (Editorial Hero) */}
+        <div className="text-center space-y-4 pt-2">
+          <div className="inline-flex items-center gap-2">
+            <span style={{ backgroundColor: theme.accentGold }} className="w-6 h-[1.5px]" />
+            <span style={{ color: theme.accentGold }} className="text-xs tracking-widest font-medium">طقس يومي، بصياغة أجمل</span>
+            <span style={{ backgroundColor: theme.accentGold }} className="w-6 h-[1.5px]" />
           </div>
 
-          {config.showStockBar && (
-            <div className="max-w-xs mx-auto pt-2 space-y-1">
-              <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-red-500">سارع بالطلب! الكمية المتبقية محدودة</span>
-                <span style={{ color: theme.accent }}>{config.stockLeft} قطع متبقية</span>
+          <h1 style={{ fontFamily: "'Amiri', serif" }} className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight">
+            {config.productTitle}
+          </h1>
+
+          <p style={{ color: theme.textMuted }} className="text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
+            قطعة تجمع بين الأصالة والهدوء، والتصميم النظيف، وإحساس الرفاهية الذي تستحقه مساحتك الخاصة.
+          </p>
+
+          {/* الزر المزدوج الراقي تماماً مثل الصورة الأولى */}
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={scrollToCheckout}
+              style={{ backgroundColor: theme.accentGold, color: theme.accentText }}
+              className="px-6 py-2.5 rounded-full text-xs font-extrabold shadow-lg hover:opacity-95 transition flex items-center gap-2"
+            >
+              <span>امتلكه الآن ←</span>
+            </button>
+            <button
+              onClick={scrollToCheckout}
+              style={{ borderColor: theme.cardBorder, color: theme.textMuted }}
+              className="border px-5 py-2.5 rounded-full text-xs font-semibold hover:bg-white/5 transition flex items-center gap-2"
+            >
+              <span>اكتشف القصة ←</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4. كارت عرض الصورة بإضاءة سينمائية */}
+        <div className="relative group">
+          <div style={{ background: theme.glowColor }} className="absolute inset-0 blur-3xl rounded-full opacity-60 pointer-events-none" />
+          <div style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder }} className="relative border rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
+            <img src={config.productImage} alt={config.productTitle} className="w-full h-80 sm:h-96 object-cover transform group-hover:scale-105 transition duration-700" />
+            
+            {/* عرض السعر الراقي المينيمال داخل البطاقة */}
+            <div style={{ borderColor: theme.divider, background: "rgba(0,0,0,0.5)" }} className="p-4 border-t backdrop-blur-md flex items-center justify-between">
+              <div>
+                <span style={{ color: theme.textMuted }} className="text-[11px] block">سعر الإطلاق الحصري</span>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span style={{ color: theme.accentGold }} className="text-2xl sm:text-3xl font-black font-sans">
+                    {config.currentPrice} {activeCountry.currency}
+                  </span>
+                  {config.oldPrice > config.currentPrice && (
+                    <span style={{ color: theme.textMuted }} className="line-through text-sm opacity-60 font-sans">
+                      {config.oldPrice} {activeCountry.currency}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min(100, Math.max(15, config.stockLeft * 10))}%`, backgroundColor: theme.accent }}
-                  className="h-full rounded-full transition-all duration-500"
-                />
-              </div>
+              <span style={{ color: theme.accentGold, borderColor: theme.cardBorder }} className="border px-3 py-1 rounded-full text-[10px] font-mono">
+                يشمل الشحن والتغليف الفاخر
+              </span>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* الصورة الرئيسية */}
-        <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="rounded-2xl overflow-hidden border shadow-xl">
-          <img src={config.productImage} alt={config.productTitle} className="w-full h-80 sm:h-[420px] object-cover" />
-        </div>
+        {/* 5. شريط ندرة القطع المتبقية */}
+        {config.showStockBar && (
+          <div style={{ borderColor: theme.cardBorder, backgroundColor: theme.cardBg }} className="border rounded-2xl p-4 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-red-400 font-bold">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span>إصدار محدود — متبقي {config.stockLeft} قطع فقط للدفعة الحالية</span>
+            </div>
+            <div className="w-full sm:w-44 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div style={{ width: `${Math.min(100, Math.max(15, config.stockLeft * 12))}%`, backgroundColor: theme.accentGold }} className="h-full rounded-full" />
+            </div>
+          </div>
+        )}
 
-        {/* المقاسات والألوان */}
+        {/* 6. المقاسات والألوان إن وجدت */}
         {(config.enableSizes || config.enableColors) && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-4 shadow-sm">
+          <div style={{ borderColor: theme.cardBorder, backgroundColor: theme.cardBg }} className="border rounded-3xl p-6 backdrop-blur-md space-y-4">
             {config.enableSizes && config.sizes && (
               <div className="space-y-2">
-                <label className="block text-xs font-bold opacity-80">
-                  المقاس المختار: <span style={{ color: theme.accent }}>{selectedSize}</span>
+                <label style={{ color: theme.textMuted }} className="block text-xs font-semibold">
+                  المقاس المختار: <b style={{ color: theme.accentGold }}>{selectedSize}</b>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {config.sizes.split(",").map((s) => {
@@ -444,10 +518,11 @@ export default function Home() {
                         type="button"
                         onClick={() => setSelectedSize(size)}
                         style={{
-                          borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? `${theme.accent}25` : "transparent"
+                          borderColor: active ? theme.accentGold : theme.cardBorder,
+                          backgroundColor: active ? theme.accentGold : "transparent",
+                          color: active ? theme.accentText : theme.textMain
                         }}
-                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition"
+                        className="border px-4 py-1.5 rounded-xl text-xs font-bold transition"
                       >
                         {size}
                       </button>
@@ -459,8 +534,8 @@ export default function Home() {
 
             {config.enableColors && config.colors && (
               <div className="space-y-2">
-                <label className="block text-xs font-bold opacity-80">
-                  اللون المختار: <span style={{ color: theme.accent }}>{selectedColor}</span>
+                <label style={{ color: theme.textMuted }} className="block text-xs font-semibold">
+                  اللون المختار: <b style={{ color: theme.accentGold }}>{selectedColor}</b>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {config.colors.split(",").map((c) => {
@@ -473,10 +548,11 @@ export default function Home() {
                         type="button"
                         onClick={() => setSelectedColor(col)}
                         style={{
-                          borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? `${theme.accent}25` : "transparent"
+                          borderColor: active ? theme.accentGold : theme.cardBorder,
+                          backgroundColor: active ? theme.accentGold : "transparent",
+                          color: active ? theme.accentText : theme.textMain
                         }}
-                        className="border-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition"
+                        className="border px-4 py-1.5 rounded-xl text-xs font-bold transition"
                       >
                         {col}
                       </button>
@@ -488,43 +564,24 @@ export default function Home() {
           </div>
         )}
 
-        {/* نقاط المميزات */}
-        <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 space-y-2.5 shadow-sm">
-          <h3 style={{ color: theme.accent }} className="font-bold text-sm">مميزات المنتج:</h3>
-          <ul className="space-y-2 text-xs sm:text-sm opacity-90">
+        {/* 7. مميزات المنتج */}
+        <div style={{ borderColor: theme.cardBorder, backgroundColor: theme.cardBg }} className="border rounded-3xl p-6 backdrop-blur-md space-y-3">
+          <h3 style={{ color: theme.accentGold }} className="font-bold text-sm tracking-wider uppercase">تفاصيل الصنعة والجودة:</h3>
+          <ul className="space-y-2.5 text-xs sm:text-sm">
             {config.features.map((f, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span style={{ color: theme.accent }} className="font-bold">✓</span>
-                <span>{f}</span>
+              <li key={i} className="flex items-start gap-2.5">
+                <span style={{ color: theme.accentGold }} className="font-serif font-bold">✦</span>
+                <span style={{ color: theme.textMain }} className="opacity-90">{f}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* معرض الصور التوضيحي والشرح */}
-        {config.gallery && config.gallery.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="font-bold text-base text-center">تفاصيل المنتج عن قرب:</h3>
-            <div className="grid grid-cols-1 gap-4">
-              {config.gallery.map((g) => (
-                <div key={g.id} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl overflow-hidden shadow-lg">
-                  <img src={g.image} alt="Detail" className="w-full h-64 sm:h-80 object-cover" />
-                  {g.caption && (
-                    <div style={{ borderColor: theme.border }} className="p-4 border-t text-xs sm:text-sm text-center font-medium opacity-90">
-                      {g.caption}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* باقات التوفير */}
+        {/* 8. باقات التوفير */}
         {config.showBundles && (
           <div className="space-y-3">
-            <h3 className="font-bold text-base text-center">عروض وباقات التوفير:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <h3 style={{ fontFamily: "'Amiri', serif" }} className="text-xl font-bold text-center">باقات الإصدار الخاص</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {config.bundles.map((b) => {
                 const isSelected = selectedQty === b.qty;
                 return (
@@ -532,21 +589,21 @@ export default function Home() {
                     key={b.qty}
                     onClick={() => setSelectedQty(b.qty)}
                     style={{
-                      borderColor: isSelected ? theme.accent : theme.border,
-                      backgroundColor: isSelected ? `${theme.accent}15` : theme.cardBg
+                      borderColor: isSelected ? theme.accentGold : theme.cardBorder,
+                      backgroundColor: isSelected ? "rgba(223, 186, 115, 0.08)" : theme.cardBg
                     }}
-                    className="cursor-pointer border-2 rounded-xl p-4 text-center relative transition shadow-sm"
+                    className="cursor-pointer border-2 rounded-2xl p-4 text-center relative transition backdrop-blur-md"
                   >
                     {b.badge && (
-                      <span style={{ backgroundColor: theme.accent, color: theme.btnText }} className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm">
+                      <span style={{ backgroundColor: theme.accentGold, color: theme.accentText }} className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-black px-3 py-0.5 rounded-full shadow-md">
                         {b.badge}
                       </span>
                     )}
                     <p className="font-bold text-sm">{b.title}</p>
-                    <p style={{ color: theme.accent }} className="text-xl font-black my-1">
+                    <p style={{ color: theme.accentGold }} className="text-2xl font-black font-sans my-1">
                       {b.price} {activeCountry.currency}
                     </p>
-                    {b.savings && <p className="text-[11px] text-emerald-500 font-semibold">{b.savings} {activeCountry.currency}</p>}
+                    {b.savings && <p style={{ color: theme.textMuted }} className="text-[11px] font-mono">{b.savings} {activeCountry.currency}</p>}
                   </div>
                 );
               })}
@@ -554,41 +611,43 @@ export default function Home() {
           </div>
         )}
 
-        {/* نموذج الطلب المباشر */}
-        <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
-          <div style={{ borderColor: theme.border }} className="border-b pb-3 text-center">
-            <h2 className="text-xl font-extrabold">أدخل بياناتك لمعاينة واستلام الطلب</h2>
-            <p className="text-xs opacity-70 mt-1">الدفع عند الاستلام مع إمكانية المعاينة قبل الدفع</p>
+        {/* 9. نموذج تأكيد الطلب السلس والمحكم */}
+        <section id="checkout-form" style={{ borderColor: theme.cardBorder, backgroundColor: theme.cardBg }} className="border rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+          <div className="text-center space-y-1.5 border-b pb-4" style={{ borderColor: theme.divider }}>
+            <h2 style={{ fontFamily: "'Amiri', serif" }} className="text-3xl font-bold">اترك بياناتك، ونحن نكمل الباقي.</h2>
+            <p style={{ color: theme.textMuted }} className="text-xs leading-relaxed">
+              سنراجع طلبك ونتواصل معك هاتفياً للتأكيد قبل الشحن. لا تحتاج إلى دفع مسبق.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmitOrder} className="space-y-3.5">
+          <form onSubmit={handleSubmitOrder} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold opacity-80 mb-1">الاسم بالكامل *</label>
+              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">الاسم الكريم *</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="اكتب اسمك الثلاثي"
-                style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                className="w-full border rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none"
+                style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMain }}
+                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:border-amber-400/80"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold opacity-80 mb-1">
-                المحافظة / المدينة ({activeCountry.name}) *
+              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">
+                المحافظة أو المدينة ({activeCountry.name}) *
               </label>
               <select
                 required
                 value={selectedProvince}
                 onChange={(e) => setSelectedProvince(e.target.value)}
-                style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                className="w-full border rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none"
+                style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.4)", color: theme.textMain }}
+                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none"
               >
                 {enabledProvinces.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.name} {p.shippingCost === 0 ? "(شحن مجاني)" : `(شحن: ${p.shippingCost} ${activeCountry.currency})`}
+                  <option key={p.id} value={p.name} className="bg-neutral-900 text-white">
+                    {p.name} {p.shippingCost === 0 ? "(شحن مجاني ومعاينة)" : `(شحن: ${p.shippingCost} ${activeCountry.currency})`}
                   </option>
                 ))}
               </select>
@@ -596,9 +655,9 @@ export default function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold opacity-80 mb-1">رقم الهاتف الأساسي *</label>
+                <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">رقم الهاتف للتواصل *</label>
                 <div className="flex items-center gap-1.5" dir="ltr">
-                  <span style={{ borderColor: theme.border, backgroundColor: theme.bg }} className="border text-xs px-2.5 py-2.5 rounded-xl font-mono">
+                  <span style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMuted }} className="border text-xs px-3 py-3 rounded-xl font-mono">
                     {activeCountry.phoneCode}
                   </span>
                   <input
@@ -607,15 +666,15 @@ export default function Home() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="رقم الهاتف"
-                    style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-left focus:outline-none"
+                    style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMain }}
+                    className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm text-left focus:outline-none"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold opacity-80 mb-1">رقم هاتف بديل (اختياري)</label>
+                <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">رقم بديل (اختياري)</label>
                 <div className="flex items-center gap-1.5" dir="ltr">
-                  <span style={{ borderColor: theme.border, backgroundColor: theme.bg }} className="border text-xs px-2.5 py-2.5 rounded-xl font-mono">
+                  <span style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMuted }} className="border text-xs px-3 py-3 rounded-xl font-mono">
                     {activeCountry.phoneCode}
                   </span>
                   <input
@@ -623,52 +682,53 @@ export default function Home() {
                     value={altPhone}
                     onChange={(e) => setAltPhone(e.target.value)}
                     placeholder="رقم آخر إن وجد"
-                    style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-left focus:outline-none"
+                    style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMain }}
+                    className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm text-left focus:outline-none"
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold opacity-80 mb-1">العنوان بالتفصيل *</label>
+              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">العنوان بالتفصيل *</label>
               <input
                 type="text"
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="اسم الشارع، رقم العمارة، علامة مميزة"
-                style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                className="w-full border rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none"
+                placeholder="الحي، اسم الشارع، رقم العقار أو علامة مميزة"
+                style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMain }}
+                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold opacity-80 mb-1">ملاحظات للمندوب (اختياري)</label>
+              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-medium">ملاحظات خاصة بالتسليم (اختياري)</label>
               <textarea
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="أي تعليمات خاصة بالتوصيل"
-                style={{ borderColor: theme.border, backgroundColor: theme.bg, color: theme.text }}
-                className="w-full border rounded-xl px-4 py-2 text-xs focus:outline-none resize-none"
+                placeholder="أي توجيهات تود إبلاغ المندوب بها"
+                style={{ borderColor: theme.cardBorder, backgroundColor: "rgba(0,0,0,0.3)", color: theme.textMain }}
+                className="w-full border rounded-xl px-4 py-2.5 text-xs focus:outline-none resize-none"
               />
             </div>
 
-            <div style={{ borderColor: theme.border, backgroundColor: theme.bg }} className="p-3.5 rounded-xl border space-y-1.5 text-xs sm:text-sm">
-              <div className="flex justify-between opacity-70">
-                <span>سعر المنتج:</span>
-                <span>{productSubtotal} {activeCountry.currency}</span>
+            {/* ملخص الدفع عند الاستلام */}
+            <div style={{ borderColor: theme.divider, backgroundColor: "rgba(0,0,0,0.2)" }} className="p-4 rounded-2xl border space-y-2 text-xs">
+              <div className="flex justify-between" style={{ color: theme.textMuted }}>
+                <span>قيمة القطع:</span>
+                <span className="font-mono">{productSubtotal} {activeCountry.currency}</span>
               </div>
-              <div className="flex justify-between opacity-70">
-                <span>مصاريف الشحن:</span>
-                <span className={shippingCost === 0 ? "text-emerald-500 font-bold" : ""}>
-                  {shippingCost === 0 ? "مجاناً" : `${shippingCost} ${activeCountry.currency}`}
+              <div className="flex justify-between" style={{ color: theme.textMuted }}>
+                <span>رسوم التوصيل والمعاينة:</span>
+                <span className={shippingCost === 0 ? "font-bold text-emerald-400" : "font-mono"}>
+                  {shippingCost === 0 ? "مجاناً بالكامل" : `${shippingCost} ${activeCountry.currency}`}
                 </span>
               </div>
-              <div style={{ borderColor: theme.border }} className="border-t pt-1.5 flex justify-between items-center font-bold">
-                <span>الإجمالي المستحق للدفع:</span>
-                <span style={{ color: theme.accent }} className="text-xl font-black">
+              <div style={{ borderColor: theme.divider }} className="border-t pt-2 flex justify-between items-center font-bold">
+                <span>المبلغ المستحق بعد المعاينة:</span>
+                <span style={{ color: theme.accentGold }} className="text-2xl font-black font-sans">
                   {finalTotal} {activeCountry.currency}
                 </span>
               </div>
@@ -677,84 +737,66 @@ export default function Home() {
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{ backgroundColor: theme.accent, color: theme.btnText }}
-              className="w-full font-extrabold text-sm sm:text-base py-3.5 rounded-xl shadow-lg transition"
+              style={{ backgroundColor: theme.accentGold, color: theme.accentText }}
+              className="w-full font-black text-sm sm:text-base py-4 rounded-2xl shadow-xl hover:opacity-95 transition flex items-center justify-center gap-2"
             >
-              {isSubmitting ? "جاري تأكيد طلبك..." : "تأكيد الطلب — الدفع عند الاستلام بعد المعاينة"}
+              {isSubmitting ? "جاري تسجيل طلبك بأمان..." : "تأكيد الطلب — الدفع بعد المعاينة عند الاستلام ←"}
             </button>
           </form>
         </section>
 
-        {/* الضمان */}
+        {/* 10. بطاقة الضمان الفاخر */}
         {config.showGuarantee && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-            <div style={{ color: theme.accent }} className="text-2xl flex-shrink-0">🛡️</div>
+          <div style={{ borderColor: theme.cardBorder, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 flex items-center gap-4 backdrop-blur-md">
+            <span style={{ color: theme.accentGold }} className="text-3xl">⚜️</span>
             <div>
               <p className="font-bold text-xs sm:text-sm">{config.guaranteeText}</p>
-              {config.guaranteeSubtext && <p className="text-[11px] opacity-70 mt-0.5">{config.guaranteeSubtext}</p>}
-            </div>
-          </div>
-        )}
-
-        {/* التقييمات */}
-        {config.showReviews && (
-          <div className="space-y-3">
-            <h3 className="font-bold text-sm opacity-90">تجارب وآراء المشترين:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {config.reviews.map((r, i) => (
-                <div key={i} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border p-3.5 rounded-xl space-y-1 shadow-sm">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold">{r.name}</span>
-                    <span style={{ color: theme.accent }}>{"★".repeat(r.rating)}</span>
-                  </div>
-                  <p className="text-xs opacity-70 leading-relaxed">"{r.comment}"</p>
-                </div>
-              ))}
+              {config.guaranteeSubtext && <p style={{ color: theme.textMuted }} className="text-[11px] mt-0.5">{config.guaranteeSubtext}</p>}
             </div>
           </div>
         )}
       </main>
 
-      {/* إشعار الشراء اللحظي المنبثق */}
+      {/* إشعار الشراء اللحظي المنبثق بنعومة */}
       {recentSale && (
-        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accent }} className="fixed bottom-16 left-4 z-50 border p-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs animate-bounce">
-          <div style={{ backgroundColor: `${theme.accent}30`, color: theme.accent }} className="w-8 h-8 rounded-full flex items-center justify-center font-bold">
-            🛍️
+        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accentGold }} className="fixed bottom-20 left-4 z-50 border p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs backdrop-blur-xl animate-fade-in">
+          <div style={{ backgroundColor: "rgba(223, 186, 115, 0.2)", color: theme.accentGold }} className="w-8 h-8 rounded-full flex items-center justify-center font-bold">
+            ✦
           </div>
           <div>
-            <p className="font-bold">قام {recentSale.name} من ({recentSale.city}) بطلب المنتج</p>
-            <p className="text-[10px] opacity-60">منذ قليل</p>
+            <p className="font-bold">أكد {recentSale.name} من {recentSale.city} طلبه</p>
+            <p style={{ color: theme.textMuted }} className="text-[10px]">منذ بضع دقائق</p>
           </div>
         </div>
       )}
 
-      {/* أيقونة واتساب الدعم العائمة - مع إطار أبيض وظل بارز للظهور فوق أي خلفية */}
+      {/* زر واتساب الدعم العائم الراقي */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
-          href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، لدي استفسار بخصوص المنتج")}`}
+          href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، أود الاستفسار عن تفاصيل المنتج")}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-20 right-4 z-50 w-13 h-13 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-2 border-white/80 transition transform hover:scale-110"
-          title="تواصل مع الدعم عبر واتساب"
+          className="fixed bottom-24 right-4 z-50 w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white/80 transition transform hover:scale-110"
+          title="خدمة العملاء عبر واتساب"
         >
-          <span className="text-2xl font-bold">💬</span>
+          <span className="text-2xl">💬</span>
         </a>
       )}
 
-      {/* زر الشراء العائم للموبايل */}
+      {/* زر الشراء العائم للموبايل في الأسفل */}
       {config.showStickyButton && (
-        <div style={{ backgroundColor: `${theme.bg}f2`, borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden z-40">
+        <div style={{ backgroundColor: "rgba(10, 5, 16, 0.88)", borderColor: theme.divider }} className="fixed bottom-0 left-0 right-0 p-3.5 backdrop-blur-xl border-t sm:hidden z-40">
           <button
             onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent, color: theme.btnText }}
-            className="w-full font-extrabold py-3 rounded-xl shadow-lg text-sm"
+            style={{ backgroundColor: theme.accentGold, color: theme.accentText }}
+            className="w-full font-black py-3.5 rounded-2xl shadow-xl text-xs sm:text-sm tracking-wide"
           >
             اطلب الآن — الدفع عند الاستلام ({config.currentPrice} {activeCountry.currency})
           </button>
         </div>
       )}
 
-      <footer style={{ borderColor: theme.border }} className="border-t py-6 text-center text-xs opacity-50">
+      <footer style={{ borderColor: theme.divider }} className="border-t py-8 text-center text-xs opacity-40 mt-16">
         <p>جميع الحقوق محفوظة © {new Date().getFullYear()} {config.storeName}</p>
       </footer>
     </div>
