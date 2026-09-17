@@ -40,6 +40,7 @@ export interface ReviewItem {
 export interface StoreConfig {
   storeName: string;
   adminEmail: string;
+  adminPassword?: string;
   logoUrl: string;
   selectedTheme: ThemeType;
   showTopBar: boolean;
@@ -127,6 +128,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
   adminEmail: "admin@example.com",
+  adminPassword: "admin",
   logoUrl: "",
   selectedTheme: "sneakers",
   showTopBar: true,
@@ -191,12 +193,23 @@ export default function Admin() {
   const [savedMsg, setSavedMsg] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
+  // حالة تسجيل الدخول
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   useEffect(() => {
     const saved = localStorage.getItem("store_config");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setConfig({ ...DEFAULT_CONFIG, ...parsed, countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) } });
+        setConfig({
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          adminPassword: parsed.adminPassword || "admin",
+          countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
+        });
       } catch (e) {
         console.error(e);
       }
@@ -209,7 +222,30 @@ export default function Admin() {
         console.error(e);
       }
     }
+
+    if (sessionStorage.getItem("admin_logged_in") === "true") {
+      setIsAuthenticated(true);
+    }
   }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const correctEmail = config.adminEmail || "admin@example.com";
+    const correctPass = config.adminPassword || "admin";
+
+    if (loginEmail.trim().toLowerCase() === correctEmail.trim().toLowerCase() && loginPassword === correctPass) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem("admin_logged_in", "true");
+      setLoginError("");
+    } else {
+      setLoginError("بيانات الدخول غير صحيحة، يرجى التأكد من البريد وكلمة السر");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem("admin_logged_in");
+  };
 
   const handleSave = () => {
     localStorage.setItem("store_config", JSON.stringify(config));
@@ -247,6 +283,65 @@ export default function Admin() {
     reader.readAsDataURL(file);
   };
 
+  // شاشة تسجيل الدخول المقفلة
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 font-sans" dir="rtl">
+        <div className="bg-neutral-900 border border-neutral-800 p-7 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
+          <div className="text-center space-y-1">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold border border-amber-500/20">
+              🔒
+            </div>
+            <h1 className="text-xl font-black text-amber-400">لوحة تحكم المتجر</h1>
+            <p className="text-xs text-neutral-400">أدخل بيانات المدير لتسجيل الدخول</p>
+          </div>
+
+          {loginError && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs text-center font-bold">
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-bold">البريد الإلكتروني</label>
+              <input
+                type="email"
+                required
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder={config.adminEmail}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-bold">كلمة المرور</label>
+              <input
+                type="password"
+                required
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="كلمة السر"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-xl text-sm transition shadow-lg"
+            >
+              تسجيل الدخول
+            </button>
+          </form>
+
+          <div className="text-center">
+            <a href="/" className="text-xs text-neutral-500 hover:text-neutral-400">الرجوع للمتجر</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 sm:p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -257,17 +352,23 @@ export default function Admin() {
             <h1 className="text-xl font-black text-amber-400">إدارة المتجر</h1>
             <p className="text-xs text-neutral-400">الدولة المحددة: {config.countries[config.activeCountry]?.name || "مصر"}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ بنجاح! ✓</span>}
             <button
               onClick={handleSave}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition"
             >
               حفظ التعديلات
             </button>
-            <a href="/" target="_blank" className="bg-neutral-800 hover:bg-neutral-700 px-4 py-2.5 rounded-xl text-xs font-bold transition">
+            <a href="/" target="_blank" className="bg-neutral-800 hover:bg-neutral-700 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition">
               عرض المتجر ↗
             </a>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition"
+            >
+              خروج
+            </button>
           </div>
         </div>
 
@@ -278,7 +379,7 @@ export default function Admin() {
             { id: "themes", name: "ثيمات الألوان (6 ثيمات)" },
             { id: "shipping", name: "الشحن والمحافظات" },
             { id: "marketing", name: "التسويق والبكسل (ميتا/تيك توك/جوجل)" },
-            { id: "settings", name: "حساب الإدارة والأمان" },
+            { id: "settings", name: "حساب الإدارة والأمان (الباسورد)" },
             { id: "orders", name: `الطلبات (${orders.length})` }
           ].map((tab) => (
             <button
@@ -583,7 +684,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 4. تبويب التسويق والبكسل (ميتا + تيك توك + جوجل المسترجع) */}
+        {/* 4. تبويب التسويق والبكسل (ميتا + تيك توك + جوجل) */}
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والبكسل</h2>
@@ -647,14 +748,14 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 5. تبويب حساب الإدارة والأمان */}
+        {/* 5. تبويب حساب الإدارة والأمان (مع خانة كلمة السر) */}
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">حساب المدير والبريد المعتمد للوحة التحكم</h2>
+            <h2 className="font-bold text-base text-amber-400">حساب المدير والأمان للدخول للوحة</h2>
             
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">البريد الإلكتروني المعتمد لإدارة المتجر</label>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">البريد الإلكتروني المعتمد للمدير</label>
                 <input
                   type="email"
                   value={config.adminEmail}
@@ -662,7 +763,18 @@ export default function Admin() {
                   placeholder="admin@example.com"
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                 />
-                <p className="text-[11px] text-neutral-500 mt-1">هذا هو البريد المعتمد للتحكم وتلقي تنبيهات المتجر الرسمية.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold text-amber-400">كلمة المرور للدخول للوحة التحكم</label>
+                <input
+                  type="password"
+                  value={config.adminPassword || ""}
+                  onChange={(e) => setConfig({ ...config, adminPassword: e.target.value })}
+                  placeholder="اكتب كلمة مرور قوية"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+                <p className="text-[11px] text-neutral-500 mt-1">احفظ كلمة المرور جيداً لأنك ستدخل بها في كل مرة تفتح لوحة التحكم.</p>
               </div>
             </div>
           </div>
@@ -718,3 +830,4 @@ export default function Admin() {
     </div>
   );
 }
+ذ
