@@ -90,7 +90,10 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
     provinces: [
       { id: "cairo", name: "القاهرة", enabled: true, shippingCost: 0 },
       { id: "giza", name: "الجيزة", enabled: true, shippingCost: 0 },
-      { id: "alex", name: "الإسكندرية", enabled: true, shippingCost: 0 }
+      { id: "alex", name: "الإسكندرية", enabled: true, shippingCost: 0 },
+      { id: "qalyubia", name: "القليوبية", enabled: true, shippingCost: 0 },
+      { id: "sharqia", name: "الشرقية", enabled: true, shippingCost: 0 },
+      { id: "dakahlia", name: "الدقهلية", enabled: true, shippingCost: 0 }
     ]
   },
   SA: {
@@ -100,7 +103,10 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
     phoneCode: "+966",
     provinces: [
       { id: "riyadh", name: "الرياض", enabled: true, shippingCost: 0 },
-      { id: "jeddah", name: "جدة", enabled: true, shippingCost: 0 }
+      { id: "jeddah", name: "جدة", enabled: true, shippingCost: 0 },
+      { id: "makkah", name: "مكة المكرمة", enabled: true, shippingCost: 0 },
+      { id: "dammam", name: "الدمام", enabled: true, shippingCost: 0 },
+      { id: "madinah", name: "المدينة المنورة", enabled: true, shippingCost: 0 }
     ]
   },
   AE: {
@@ -110,7 +116,9 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
     phoneCode: "+971",
     provinces: [
       { id: "dubai", name: "دبي", enabled: true, shippingCost: 0 },
-      { id: "abudhabi", name: "أبوظبي", enabled: true, shippingCost: 0 }
+      { id: "abudhabi", name: "أبوظبي", enabled: true, shippingCost: 0 },
+      { id: "sharjah", name: "الشارقة", enabled: true, shippingCost: 0 },
+      { id: "ajman", name: "عجمان", enabled: true, shippingCost: 0 }
     ]
   },
   LY: {
@@ -120,7 +128,9 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
     phoneCode: "+218",
     provinces: [
       { id: "tripoli", name: "طرابلس", enabled: true, shippingCost: 0 },
-      { id: "benghazi", name: "بنغازي", enabled: true, shippingCost: 0 }
+      { id: "benghazi", name: "بنغازي", enabled: true, shippingCost: 0 },
+      { id: "misrata", name: "مصراتة", enabled: true, shippingCost: 0 },
+      { id: "zawiya", name: "الزاوية", enabled: true, shippingCost: 0 }
     ]
   }
 };
@@ -198,10 +208,12 @@ export default function Admin() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  // حقول خاصة بتغيير الحساب لكلمة السر والإيميل
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passMsg, setPassMsg] = useState("");
+
+  const [newProvinceName, setNewProvinceName] = useState("");
+  const [newProvinceCost, setNewProvinceCost] = useState(0);
 
   const fetchCloudOrders = (token?: string) => {
     const currentToken = token || sessionStorage.getItem("admin_token");
@@ -267,8 +279,6 @@ export default function Admin() {
 
   const handleSave = async () => {
     const token = sessionStorage.getItem("admin_token");
-    
-    // إذا كان العميل أدخل كلمة سر جديدة للتغيير
     const payload = { ...config };
     if (newPassword.trim() !== "") {
       if (newPassword !== confirmPassword) {
@@ -290,7 +300,7 @@ export default function Admin() {
       if (res.ok) {
         setSavedMsg(true);
         if (newPassword.trim() !== "") {
-          setPassMsg("تم تحديث كلمة المرور بنجاح! سيتم مطالبتك بها في تسجيل الدخول القادم.");
+          setPassMsg("تم تحديث كلمة المرور بنجاح! سيتم مطالبتك بها في الدخول القادم.");
           setNewPassword("");
           setConfirmPassword("");
         }
@@ -334,6 +344,32 @@ export default function Admin() {
         console.error(e);
       }
     }
+  };
+
+  const handleAddProvince = () => {
+    if (!newProvinceName.trim()) return;
+    const currentCountry = config.countries[config.activeCountry];
+    if (!currentCountry) return;
+
+    const newId = `prov_${Date.now()}`;
+    const updatedProvinces = [
+      ...currentCountry.provinces,
+      { id: newId, name: newProvinceName.trim(), enabled: true, shippingCost: Number(newProvinceCost) || 0 }
+    ];
+
+    setConfig({
+      ...config,
+      countries: {
+        ...config.countries,
+        [config.activeCountry]: {
+          ...currentCountry,
+          provinces: updatedProvinces
+        }
+      }
+    });
+
+    setNewProvinceName("");
+    setNewProvinceCost(0);
   };
 
   const exportToCSV = () => {
@@ -400,7 +436,7 @@ export default function Admin() {
           <div className="text-center space-y-1">
             <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold border border-amber-500/20">🔒</div>
             <h1 className="text-xl font-black text-amber-400">لوحة تحكم المتجر</h1>
-            <p className="text-xs text-neutral-400">تسجيل دخول آمن ومحمي بالسيرفر</p>
+            <p className="text-xs text-neutral-400">تسجيل دخول مشفر ومحمي بالسيرفر</p>
           </div>
           {loginError && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs text-center font-bold">{loginError}</div>}
           <form onSubmit={handleLogin} className="space-y-4">
@@ -419,6 +455,8 @@ export default function Admin() {
       </div>
     );
   }
+
+  const activeCountryData = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 sm:p-6" dir="rtl">
@@ -521,21 +559,88 @@ export default function Admin() {
         )}
 
         {activeTab === "shipping" && (
-          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">أسعار الشحن والمحافظات</h2>
-            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-              {config.countries[config.activeCountry]?.provinces.map((prov, idx) => (
-                <div key={prov.id} className="flex items-center justify-between bg-neutral-950 border border-neutral-800 p-3 rounded-xl text-xs">
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={prov.enabled} onChange={(e) => { const u = { ...config }; u.countries[config.activeCountry].provinces[idx].enabled = e.target.checked; setConfig(u); }} className="w-4 h-4 accent-amber-500" />
-                    <span className="font-bold">{prov.name}</span>
+          <div className="space-y-5 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <div className="border-b border-neutral-800 pb-4 space-y-3">
+              <h2 className="font-bold text-base text-amber-400">الدولة وأسعار الشحن</h2>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">الدولة النشطة للمتجر</label>
+                <select
+                  value={config.activeCountry}
+                  onChange={(e) => setConfig({ ...config, activeCountry: e.target.value })}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm font-bold text-amber-400 focus:outline-none"
+                >
+                  <option value="EG">🇪🇬 مصر (ج.م - +20)</option>
+                  <option value="SA">🇸🇦 السعودية (ر.س - +966)</option>
+                  <option value="AE">🇦🇪 الإمارات (د.إ - +971)</option>
+                  <option value="LY">🇱🇾 ليبيا (د.ل - +218)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-neutral-300">
+                  قائمة المحافظات والمدن ({activeCountryData.name})
+                </span>
+                <span className="text-xs text-neutral-500">العملة: {activeCountryData.currency}</span>
+              </div>
+
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {activeCountryData.provinces.map((prov, idx) => (
+                  <div key={prov.id} className="flex items-center justify-between bg-neutral-950 border border-neutral-800 p-3 rounded-xl text-xs">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        checked={prov.enabled} 
+                        onChange={(e) => { 
+                          const u = { ...config }; 
+                          u.countries[config.activeCountry].provinces[idx].enabled = e.target.checked; 
+                          setConfig(u); 
+                        }} 
+                        className="w-4 h-4 accent-amber-500" 
+                      />
+                      <span className="font-bold">{prov.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        value={prov.shippingCost} 
+                        onChange={(e) => { 
+                          const u = { ...config }; 
+                          u.countries[config.activeCountry].provinces[idx].shippingCost = Number(e.target.value); 
+                          setConfig(u); 
+                        }} 
+                        className="w-20 bg-neutral-900 border border-neutral-800 rounded-lg p-1.5 text-center font-bold text-amber-400" 
+                      />
+                      <span className="text-neutral-500">{activeCountryData.currency}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={prov.shippingCost} onChange={(e) => { const u = { ...config }; u.countries[config.activeCountry].provinces[idx].shippingCost = Number(e.target.value); setConfig(u); }} className="w-20 bg-neutral-900 border border-neutral-800 rounded-lg p-1.5 text-center font-bold text-amber-400" />
-                    <span className="text-neutral-500">{config.countries[config.activeCountry]?.currency}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <div className="border-t border-neutral-800 pt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="اسم المحافظة أو المدينة الجديدة"
+                  value={newProvinceName}
+                  onChange={(e) => setNewProvinceName(e.target.value)}
+                  className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                />
+                <input
+                  type="number"
+                  placeholder="سعر الشحن"
+                  value={newProvinceCost || ""}
+                  onChange={(e) => setNewProvinceCost(Number(e.target.value))}
+                  className="w-24 bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-center"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddProvince}
+                  className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                >
+                  + إضافة
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -622,7 +727,7 @@ export default function Admin() {
                   />
                 </div>
                 <p className="text-[11px] text-neutral-500">
-                  عند الضغط على "حفظ التعديلات" في الأعلى، سيتم تشفير كلمة المرور وتحديث البريد فوراً في السيرفر، ولن يستطيع أي شخص الدخول بالبيانات القديمة نهائياً.
+                  عند الضغط على "حفظ التعديلات" في الأعلى، سيتم تشفير كلمة المرور وتحديث البريد فوراً في السيرفر.
                 </p>
               </div>
             </div>
