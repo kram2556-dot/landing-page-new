@@ -77,6 +77,7 @@ export interface StoreConfig {
   reviews: ReviewItem[];
   whatsappNumber: string;
   metaPixelId: string;
+  metaAccessToken: string;
   tiktokPixelId: string;
   googlePixelId: string;
 }
@@ -184,6 +185,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   ],
   whatsappNumber: "+201000000000",
   metaPixelId: "",
+  metaAccessToken: "",
   tiktokPixelId: "",
   googlePixelId: ""
 };
@@ -212,11 +214,9 @@ export default function Admin() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passMsg, setPassMsg] = useState("");
 
-  // حقول إضافة محافظة جديدة
   const [newProvinceName, setNewProvinceName] = useState("");
   const [newProvinceCost, setNewProvinceCost] = useState(0);
 
-  // حقول إضافة دولة جديدة
   const [newCountryName, setNewCountryName] = useState("");
   const [newCountryCode, setNewCountryCode] = useState("");
   const [newCountryCurrency, setNewCountryCurrency] = useState("");
@@ -235,8 +235,12 @@ export default function Admin() {
       .catch((err) => console.error(err));
   };
 
-  useEffect(() => {
-    fetch('/api/store')
+  const loadStoreConfig = (token?: string) => {
+    const currentToken = token || sessionStorage.getItem("admin_token");
+    const headers: Record<string, string> = {};
+    if (currentToken) headers['x-admin-token'] = currentToken;
+
+    fetch('/api/store', { headers })
       .then(res => res.json())
       .then(cloudData => {
         if (cloudData && Object.keys(cloudData).length > 0) {
@@ -249,11 +253,16 @@ export default function Admin() {
         }
       })
       .catch(() => {});
+  };
 
+  useEffect(() => {
     const existingToken = sessionStorage.getItem("admin_token");
     if (existingToken) {
       setIsAuthenticated(true);
+      loadStoreConfig(existingToken);
       fetchCloudOrders(existingToken);
+    } else {
+      loadStoreConfig();
     }
   }, []);
 
@@ -270,6 +279,7 @@ export default function Admin() {
         sessionStorage.setItem("admin_token", data.token);
         setIsAuthenticated(true);
         setLoginError("");
+        loadStoreConfig(data.token);
         fetchCloudOrders(data.token);
       } else {
         setLoginError(data.error || "بيانات الدخول غير صحيحة");
@@ -307,7 +317,7 @@ export default function Admin() {
       if (res.ok) {
         setSavedMsg(true);
         if (newPassword.trim() !== "") {
-          setPassMsg("تم تحديث كلمة المرور بنجاح! سيتم مطالبتك بها في الدخول القادم.");
+          setPassMsg("تم تحديث كلمة المرور بنجاح!");
           setNewPassword("");
           setConfirmPassword("");
         }
@@ -413,7 +423,7 @@ export default function Admin() {
     setNewCountryCode("");
     setNewCountryCurrency("");
     setNewCountryPhoneCode("");
-    alert(`تمت إضافة دولة (${newCountryObj.name}) بنجاح وتعيينها كدولة نشطة!`);
+    alert(`تمت إضافة دولة (${newCountryObj.name}) بنجاح!`);
   };
 
   const exportToCSV = () => {
@@ -511,7 +521,7 @@ export default function Admin() {
             <p className="text-xs text-emerald-400 font-semibold">حماية سحابية كاملة ومصادقة مشفرة ✓</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ السحابي بنجاح! ✓</span>}
+            {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ بنجاح! ✓</span>}
             <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition">حفظ التعديلات</button>
             <a href="/" target="_blank" className="bg-neutral-800 hover:bg-neutral-700 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition">عرض المتجر ↗</a>
             <button onClick={handleLogout} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition">خروج</button>
@@ -523,7 +533,7 @@ export default function Admin() {
             { id: "product", name: "المنتج والعروض" },
             { id: "themes", name: "ثيمات الألوان" },
             { id: "shipping", name: "الدول والمحافظات" },
-            { id: "marketing", name: "التسويق والبكسل" },
+            { id: "marketing", name: "التسويق و CAPI" },
             { id: "settings", name: "حساب الإدارة والأمان" },
             { id: "orders", name: `الطلبات السحابية (${orders.length})` }
           ].map((tab) => (
@@ -604,7 +614,6 @@ export default function Admin() {
 
         {activeTab === "shipping" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            {/* 1. اختيار الدولة النشطة */}
             <div className="border-b border-neutral-800 pb-4 space-y-3">
               <h2 className="font-bold text-base text-amber-400">الدولة والعملة النشطة</h2>
               <div>
@@ -626,22 +635,21 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* 2. إضافة دولة جديدة تماماً */}
             <div className="bg-neutral-950/80 border border-amber-500/20 p-4 rounded-2xl space-y-3">
               <h3 className="text-xs font-bold text-amber-400">🌍 إضافة دولة جديدة للمتجر</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
-                  <label className="block text-[10px] text-neutral-400 mb-1">اسم الدولة (مثال: الكويت)</label>
+                  <label className="block text-[10px] text-neutral-400 mb-1">اسم الدولة</label>
                   <input
                     type="text"
                     value={newCountryName}
                     onChange={(e) => setNewCountryName(e.target.value)}
-                    placeholder="الكويت"
+                    placeholder="مثال: الكويت"
                     className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-neutral-400 mb-1">رمز الدولة (مثال: KW)</label>
+                  <label className="block text-[10px] text-neutral-400 mb-1">رمز الدولة</label>
                   <input
                     type="text"
                     value={newCountryCode}
@@ -651,7 +659,7 @@ export default function Admin() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-neutral-400 mb-1">العملة (مثال: د.ك)</label>
+                  <label className="block text-[10px] text-neutral-400 mb-1">العملة</label>
                   <input
                     type="text"
                     value={newCountryCurrency}
@@ -661,7 +669,7 @@ export default function Admin() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-neutral-400 mb-1">كود الاتصال (مثال: +965)</label>
+                  <label className="block text-[10px] text-neutral-400 mb-1">كود الاتصال</label>
                   <input
                     type="text"
                     value={newCountryPhoneCode}
@@ -680,7 +688,6 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* 3. قائمة المحافظات للدولة المختارة */}
             <div className="space-y-3 border-t border-neutral-800 pt-4">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-neutral-200">
@@ -722,11 +729,10 @@ export default function Admin() {
                 ))}
               </div>
 
-              {/* 4. إضافة محافظة جديدة للدولة المختارة */}
               <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
-                  placeholder={`اسم المحافظة أو المدينة في (${activeCountryData.name})`}
+                  placeholder={`اسم المحافظة في (${activeCountryData.name})`}
                   value={newProvinceName}
                   onChange={(e) => setNewProvinceName(e.target.value)}
                   className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-white"
@@ -754,7 +760,7 @@ export default function Admin() {
 
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع الإعلاني</h2>
+            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع (مع دعم CAPI)</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -768,11 +774,20 @@ export default function Admin() {
               </div>
 
               <div className="border-t border-neutral-800 pt-4 space-y-3">
-                <h3 className="text-xs font-bold text-neutral-300">أكواد البيكسل (Pixels Tracking)</h3>
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Meta Pixel ID (فيسبوك وإنستجرام)</label>
-                  <input type="text" value={config.metaPixelId} onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })} placeholder="مثال: 123456789012345" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                <h3 className="text-xs font-bold text-neutral-300">أكواد البيكسل و Meta Conversions API (CAPI)</h3>
+                
+                <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 space-y-2.5">
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1 font-bold">Meta Pixel ID (المتصفح)</label>
+                    <input type="text" value={config.metaPixelId} onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })} placeholder="مثال: 123456789012345" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-emerald-400 mb-1 font-bold">Meta CAPI Access Token (تتبع السيرفر المباشر ⚡)</label>
+                    <input type="password" value={config.metaAccessToken} onChange={(e) => setConfig({ ...config, metaAccessToken: e.target.value })} placeholder="EAAB... (رمز الوصول من مدير أحداث فيسبوك)" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs font-mono text-white" />
+                    <p className="text-[10px] text-neutral-500 mt-1">رمز محمي ومخفي عن الزوار العاديين، ويُرسل فورياً من خادم Cloudflare إلى فيسبوك عند كل طلب.</p>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">TikTok Pixel ID</label>
                   <input type="text" value={config.tiktokPixelId} onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })} placeholder="مثال: C6ABCD1234567890EFGH" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
@@ -789,8 +804,8 @@ export default function Admin() {
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-3">
-              <h2 className="font-bold text-base text-amber-400">حساب الإدارة والأمان الخاص بالعميل</h2>
-              <p className="text-xs text-neutral-400 mt-1">يمكن للعميل هنا تغيير بريده الإلكتروني وكلمة مروره ليصبح المتجر ملكه بالكامل ومحمي بـ SHA-256.</p>
+              <h2 className="font-bold text-base text-amber-400">حساب الإدارة والأمان</h2>
+              <p className="text-xs text-neutral-400 mt-1">تشفير قياسي بـ PBKDF2 مع إبطال فوري لكافة الجلسات القديمة عند تغيير كلمة السر.</p>
             </div>
 
             {passMsg && (
@@ -808,7 +823,6 @@ export default function Admin() {
                   onChange={(e) => setConfig({ ...config, adminEmail: e.target.value })} 
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
                 />
-                <p className="text-[11px] text-neutral-500 mt-1">هذا هو البريد الذي سيستخدمه العميل لتسجيل الدخول.</p>
               </div>
 
               <div className="border-t border-neutral-800 pt-4 space-y-3">
@@ -819,7 +833,7 @@ export default function Admin() {
                     type="password" 
                     value={newPassword} 
                     onChange={(e) => setNewPassword(e.target.value)} 
-                    placeholder="اكتب كلمة مرور قوية وجديدة" 
+                    placeholder="اكتب كلمة مرور جديدة" 
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
                   />
                 </div>
@@ -833,9 +847,6 @@ export default function Admin() {
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
                   />
                 </div>
-                <p className="text-[11px] text-neutral-500">
-                  عند الضغط على "حفظ التعديلات" في الأعلى، سيتم تشفير كلمة المرور وتحديث البريد فوراً في السيرفر.
-                </p>
               </div>
             </div>
           </div>
