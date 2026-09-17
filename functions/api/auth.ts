@@ -1,6 +1,17 @@
-async function hashPBKDF2(password: string): Promise<string> {
-  const salt = new Uint8Array(16);
-  crypto.getRandomValues(salt);
+interface Env {
+  STORE_KV: KVNamespace;
+}
+
+// دالة مساعدة لتشفير كلمة المرور والتحقق منها باستخدام PBKDF2
+async function verifyPassword(password: string, hashWithSalt: string): Promise<boolean> {
+  const parts = hashWithSalt.split(":");
+  if (parts.length !== 2) return false;
+  const [saltHex, originalHashHex] = parts;
+
+  // تحويل Salt من Hex إلى Uint8Array
+  const salt = new Uint8Array(
+    saltHex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
+  );
 
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -11,139 +22,183 @@ async function hashPBKDF2(password: string): Promise<string> {
     ["deriveBits", "deriveKey"]
   );
 
-  const derivedKey = await crypto.subtle.deriveBits(
+  const derivedKey = await crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt: salt,
-      iterations: 210000,
+      salt,
+      iterations: 100000,
       hash: "SHA-256"
     },
     keyMaterial,
-    256
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
   );
 
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-  const keyHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
+  const rawHash = await crypto.subtle.exportKey("raw", derivedKey);
+  const hashHex = Array.from(new Uint8Array(rawHash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 
-  return `${saltHex}:${keyHex}`;
+  return hashHex === originalHashHex;
 }
 
-async function verifyPBKDF2(password: string, combinedHash: string): Promise<boolean> {
-  try {
-    const parts = combinedHash.split(":");
-    if (parts.length !== 2) return false;
-    const [saltHex, keyHex] = parts;
+// دالة مساعدة لتشفير كلمة مرور جديدة وتخزينها بصيغة PBKDF2
+async function hashNewPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits", "deriveKey"]
+  );
 
-    const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(password),
-      { name: "PBKDF2" },
-      false,
-      ["deriveBits", "deriveKey"]
-    );
+  const derivedKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
 
-    const derivedKey = await crypto.subtle.deriveBits(
-      {
-        name: "PBKDF2",
-        salt: salt,
-        iterations: 210000,
-        hash: "SHA-256"
-      },
-      keyMaterial,
-      256
-    );
+  const rawHash = await crypto.subtle.exportKey("raw", derivedKey);
+  const hashHex = Array.from(new Uint8Array(rawHash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const saltHex = Array.from(salt)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 
-    const derivedHex = Array.from(new Uint8Array(derivedKey))
-      .map(b => b.toString(16).padStart(2, "0"))
-      .join("");
+  return `${saltHex}:${hashHex}`;
+}
 
-    return derivedHex === keyHex;
-  } catch {
-    return false;
+export const onRequest: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const origin = request.headers.get("Origin") || "";
+
+  // إعداد ترويسات CORS بنطاق محدد
+  const corsHeaders: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
+  };
+  if (origin && (origin === url.origin || origin.endsWith(".pages.dev"))) {
+    corsHeaders["Access-Control-Allow-Origin"] = origin;
   }
-}
 
-function generateToken(): string {
-  const array = new Uint8Array(24);
-  crypto.getRandomValues(array);
-  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
-}
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-export async function onRequestPost(context: any) {
-  try {
-    const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
-    const rateKey = `rate:auth:${clientIP}`;
-    
-    const attemptsRaw = await context.env.STORE_KV.get(rateKey);
-    const attempts = attemptsRaw ? parseInt(attemptsRaw) : 0;
-    if (attempts >= 5) {
-      return new Response(JSON.stringify({ error: "تم حظر المحاولات مؤقتاً لكثرة الأخطاء. انتظر 15 دقيقة." }), {
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+  }
+
+  // 1. فحص الحماية ضد التخمين (Rate Limiting per IP)
+  const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rateLimitKey = `rate_limit:auth:${clientIP}`;
+  const rawAttempts = await env.STORE_KV.get(rateLimitKey);
+  const attempts = rawAttempts ? parseInt(rawAttempts, 10) : 0;
+
+  if (attempts >= 5) {
+    return new Response(
+      JSON.stringify({ error: "تم تجاوز الحد الأقصى للمحاولات الفاشلة. يرجى الانتظار لمدة 5 دقائق." }),
+      {
         status: 429,
-        headers: { "Content-Type": "application/json" }
-      });
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+  }
+
+  try {
+    const { email, password } = (await request.json()) as { email?: string; password?: string };
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: "يرجى كتابة البريد الإلكتروني وكلمة المرور" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
-    const { email, password } = await context.request.json();
-    
-    const storeRaw = await context.env.STORE_KV.get("STORE_CONFIG");
-    const storeData = storeRaw ? JSON.parse(storeRaw) : {};
+    // 2. جلب بيانات المتجر المخزنة
+    const rawStore = await env.STORE_KV.get("STORE_CONFIG");
+    const storeConfig = rawStore ? JSON.parse(rawStore) : {};
 
-    const correctEmail = (storeData.adminEmail || "admin@example.com").toLowerCase().trim();
-    const storedHash = storeData.adminPasswordHash;
-    const storedPlain = storeData.adminPassword || "admin";
+    const configuredEmail = storeConfig.adminEmail || "admin@example.com";
+    let isPasswordCorrect = false;
 
-    let isValid = false;
-    let needsRehash = false;
-
-    if (storedHash) {
-      isValid = await verifyPBKDF2(password, storedHash);
-      
-      if (!isValid && storedHash.length === 64) {
-        const msg = new TextEncoder().encode(password);
-        const hashBuf = await crypto.subtle.digest("SHA-256", msg);
-        const hex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
-        if (hex === storedHash) {
-          isValid = true;
-          needsRehash = true;
+    // 3. التحقق من تطابق البريد الإلكتروني
+    if (email.trim().toLowerCase() === configuredEmail.trim().toLowerCase()) {
+      if (storeConfig.adminPasswordHash) {
+        // التحقق باستخدام هاش PBKDF2
+        isPasswordCorrect = await verifyPassword(password, storeConfig.adminPasswordHash);
+      } else {
+        // دعم الترقية التلقائية من كلمة المرور الافتراضية
+        const currentPlain = storeConfig.adminPassword || "admin";
+        if (password === currentPlain) {
+          isPasswordCorrect = true;
+          // ترقية فورية وتشفير الكلمة إلى PBKDF2
+          const newHash = await hashNewPassword(password);
+          storeConfig.adminPasswordHash = newHash;
+          delete storeConfig.adminPassword;
+          await env.STORE_KV.put("STORE_CONFIG", JSON.stringify(storeConfig));
         }
       }
-    } else {
-      if (password === storedPlain) {
-        isValid = true;
-        needsRehash = true;
-      }
     }
 
-    if (email.toLowerCase().trim() === correctEmail && isValid) {
-      await context.env.STORE_KV.delete(rateKey);
-
-      if (needsRehash) {
-        storeData.adminPasswordHash = await hashPBKDF2(password);
-        delete storeData.adminPassword;
-        await context.env.STORE_KV.put("STORE_CONFIG", JSON.stringify(storeData));
-      }
-      
-      const sessionToken = generateToken();
-      await context.env.STORE_KV.put(`session:${sessionToken}`, "active", { expirationTtl: 86400 });
-
-      return new Response(JSON.stringify({ success: true, token: sessionToken }), {
-        headers: { "Content-Type": "application/json" }
-      });
+    // 4. في حالة فشل التحقق (تسجيل محاولة فاشلة)
+    if (!isPasswordCorrect) {
+      await env.STORE_KV.put(rateLimitKey, String(attempts + 1), { expirationTtl: 300 });
+      return new Response(
+        JSON.stringify({ error: "بيانات الدخول غير صحيحة" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
-    await context.env.STORE_KV.put(rateKey, (attempts + 1).toString(), { expirationTtl: 900 });
+    // 5. في حالة نجاح تسجيل الدخول (تصفير عداد المحاولات الفاشلة)
+    if (attempts > 0) {
+      await env.STORE_KV.delete(rateLimitKey);
+    }
 
-    return new Response(JSON.stringify({ error: "بيانات الدخول غير صحيحة" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" }
+    // إنشاء توكن جلسة مشفر وفريد (Session Token)
+    const token = crypto.randomUUID();
+    const sessionData = {
+      email: configuredEmail,
+      createdAt: Date.now()
+    };
+
+    // حفظ الجلسة في KV لمدة 7 أيام (604,800 ثانية)
+    await env.STORE_KV.put(`session:${token}`, JSON.stringify(sessionData), {
+      expirationTtl: 604800
     });
-  } catch (err: any) {
-    console.error("Auth Error:", err);
-    return new Response(JSON.stringify({ error: "حدث خطأ غير متوقع في الخادم" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+
+    return new Response(
+      JSON.stringify({ success: true, token }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "حدث خطأ غير متوقع أثناء معالجة الطلب" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
   }
-}
+};
