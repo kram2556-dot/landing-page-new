@@ -17,12 +17,6 @@ export interface CountryConfig {
   provinces: ProvinceItem[];
 }
 
-export interface GalleryItem {
-  id: string;
-  image: string;
-  caption: string;
-}
-
 export interface BundleItem {
   qty: number;
   title: string;
@@ -39,8 +33,6 @@ export interface ReviewItem {
 
 export interface StoreConfig {
   storeName: string;
-  adminEmail: string;
-  adminPassword?: string;
   logoUrl: string;
   selectedTheme: ThemeType;
   showTopBar: boolean;
@@ -60,7 +52,7 @@ export interface StoreConfig {
   countries: Record<string, CountryConfig>;
   productTitle: string;
   productImage: string;
-  gallery: GalleryItem[];
+  gallery: { id: string; image: string; caption: string }[];
   currentPrice: number;
   oldPrice: number;
   features: string[];
@@ -81,937 +73,670 @@ export interface StoreConfig {
   googlePixelId: string;
 }
 
+declare global {
+  interface Window {
+    fbq?: any;
+    ttq?: any;
+    gtag?: any;
+    dataLayer?: any[];
+  }
+}
+
+// محرك لوحات الألوان للثيمات الستة
 const THEME_STYLES: Record<ThemeType, {
   bg: string;
   cardBg: string;
-  border: string;
+  primary: string;
+  primaryText: string;
   accent: string;
-  accentText: string;
-  textMain: string;
-  textMuted: string;
-  inputBg: string;
-  inputBorder: string;
-  isLight: boolean;
+  border: string;
+  badgeBg: string;
 }> = {
   sneakers: {
-    bg: "#0c0e12",
-    cardBg: "#151b24",
-    border: "#283547",
-    accent: "#f59e0b",
-    accentText: "#000000",
-    textMain: "#f8fafc",
-    textMuted: "#94a3b8",
-    inputBg: "#0f1319",
-    inputBorder: "#283547",
-    isLight: false
+    bg: "bg-neutral-950",
+    cardBg: "bg-neutral-900",
+    primary: "bg-amber-500 hover:bg-amber-400 text-black",
+    primaryText: "text-amber-400",
+    accent: "border-amber-500",
+    border: "border-neutral-800",
+    badgeBg: "bg-amber-500 text-black"
   },
   perfume: {
-    bg: "#0c0714",
-    cardBg: "#181024",
-    border: "rgba(223, 186, 115, 0.25)",
-    accent: "#dfba73",
-    accentText: "#0c0714",
-    textMain: "#faf7f2",
-    textMuted: "#a599b5",
-    inputBg: "#120b1e",
-    inputBorder: "#34224c",
-    isLight: false
+    bg: "bg-[#0f0919]",
+    cardBg: "bg-[#1b122c]",
+    primary: "bg-[#dfba73] hover:bg-[#ebd29c] text-[#1b122c]",
+    primaryText: "text-[#dfba73]",
+    accent: "border-[#dfba73]",
+    border: "border-[#2d1f47]",
+    badgeBg: "bg-[#dfba73] text-[#1b122c]"
   },
   fashion: {
-    bg: "#110f0e",
-    cardBg: "#1c1814",
-    border: "#3d352c",
-    accent: "#d4a373",
-    accentText: "#110f0e",
-    textMain: "#faf8f5",
-    textMuted: "#a89c91",
-    inputBg: "#151210",
-    inputBorder: "#3a3026",
-    isLight: false
+    bg: "bg-[#14100e]",
+    cardBg: "bg-[#211a17]",
+    primary: "bg-[#d4a373] hover:bg-[#e0b992] text-[#14100e]",
+    primaryText: "text-[#d4a373]",
+    accent: "border-[#d4a373]",
+    border: "border-[#382d28]",
+    badgeBg: "bg-[#d4a373] text-[#14100e]"
   },
   medical: {
-    bg: "#f8fafc",
-    cardBg: "#ffffff",
-    border: "#cbd5e1",
-    accent: "#0284c7",
-    accentText: "#ffffff",
-    textMain: "#0f172a",
-    textMuted: "#475569",
-    inputBg: "#ffffff",
-    inputBorder: "#cbd5e1",
-    isLight: true
+    bg: "bg-slate-950",
+    cardBg: "bg-slate-900",
+    primary: "bg-cyan-500 hover:bg-cyan-400 text-slate-950",
+    primaryText: "text-cyan-400",
+    accent: "border-cyan-500",
+    border: "border-slate-800",
+    badgeBg: "bg-cyan-500 text-slate-950"
   },
   home: {
-    bg: "#0a0f1d",
-    cardBg: "#111827",
-    border: "#1f2937",
-    accent: "#3b82f6",
-    accentText: "#ffffff",
-    textMain: "#f9fafb",
-    textMuted: "#9ca3af",
-    inputBg: "#0c1322",
-    inputBorder: "#24324d",
-    isLight: false
+    bg: "bg-[#090d16]",
+    cardBg: "bg-[#111827]",
+    primary: "bg-blue-500 hover:bg-blue-400 text-white",
+    primaryText: "text-blue-400",
+    accent: "border-blue-500",
+    border: "border-slate-800",
+    badgeBg: "bg-blue-500 text-white"
   },
   kids: {
-    bg: "#f4f7f5",
-    cardBg: "#ffffff",
-    border: "#dcfce7",
-    accent: "#10b981",
-    accentText: "#ffffff",
-    textMain: "#064e3b",
-    textMuted: "#374151",
-    inputBg: "#ffffff",
-    inputBorder: "#a7f3d0",
-    isLight: true
+    bg: "bg-[#061412]",
+    cardBg: "bg-[#0c2420]",
+    primary: "bg-emerald-500 hover:bg-emerald-400 text-black",
+    primaryText: "text-emerald-400",
+    accent: "border-emerald-500",
+    border: "border-emerald-900/60",
+    badgeBg: "bg-emerald-500 text-black"
   }
 };
 
-const COLOR_MAP: Record<string, string> = {
-  "أسود": "#111111",
-  "اسود": "#111111",
-  "black": "#111111",
-  "أبيض": "#f8fafc",
-  "ابيض": "#f8fafc",
-  "white": "#f8fafc",
-  "رمادي": "#6b7280",
-  "رمادى": "#6b7280",
-  "رصاصي": "#9ca3af",
-  "gray": "#6b7280",
-  "grey": "#6b7280",
-  "كحلي": "#1e293b",
-  "كحلى": "#1e293b",
-  "navy": "#1e293b",
-  "أزرق": "#2563eb",
-  "ازرق": "#2563eb",
-  "blue": "#2563eb",
-  "أحمر": "#dc2626",
-  "احمر": "#dc2626",
-  "red": "#dc2626",
-  "أصفر": "#eab308",
-  "اصفر": "#eab308",
-  "yellow": "#eab308",
-  "أخضر": "#16a34a",
-  "اخضر": "#16a34a",
-  "green": "#16a34a",
-  "زيتي": "#4d5b38",
-  "بيج": "#d4b996",
-  "beige": "#d4b996",
-  "بني": "#78350f",
-  "بنى": "#78350f",
-  "brown": "#78350f",
-  "برتقالي": "#ea580c",
-  "برتقالى": "#ea580c",
-  "orange": "#ea580c"
-};
-
-const resolveColorSwatch = (colorName: string): { bg: string; border: string } => {
-  const clean = colorName.trim().toLowerCase();
-  for (const [key, val] of Object.entries(COLOR_MAP)) {
-    if (clean.includes(key)) {
-      return { bg: val, border: val === "#f8fafc" ? "#94a3b8" : "transparent" };
-    }
-  }
-  return { bg: "#64748b", border: "transparent" };
-};
-
-const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
-  EG: {
-    code: "EG",
-    name: "مصر",
-    currency: "ج.م",
-    phoneCode: "+20",
-    provinces: [
-      { id: "cairo", name: "القاهرة", enabled: true, shippingCost: 0 },
-      { id: "giza", name: "الجيزة", enabled: true, shippingCost: 0 },
-      { id: "alex", name: "الإسكندرية", enabled: true, shippingCost: 0 }
-    ]
-  },
-  SA: {
-    code: "SA",
-    name: "السعودية",
-    currency: "ر.س",
-    phoneCode: "+966",
-    provinces: [
-      { id: "riyadh", name: "الرياض", enabled: true, shippingCost: 0 },
-      { id: "jeddah", name: "جدة", enabled: true, shippingCost: 0 }
-    ]
-  },
-  AE: {
-    code: "AE",
-    name: "الإمارات",
-    currency: "د.إ",
-    phoneCode: "+971",
-    provinces: [
-      { id: "dubai", name: "دبي", enabled: true, shippingCost: 0 },
-      { id: "abudhabi", name: "أبوظبي", enabled: true, shippingCost: 0 }
-    ]
-  },
-  LY: {
-    code: "LY",
-    name: "ليبيا",
-    currency: "د.ل",
-    phoneCode: "+218",
-    provinces: [
-      { id: "tripoli", name: "طرابلس", enabled: true, shippingCost: 0 },
-      { id: "benghazi", name: "بنغازي", enabled: true, shippingCost: 0 }
-    ]
-  }
-};
-
-const DEFAULT_CONFIG: StoreConfig = {
-  storeName: "متجر النخبة",
-  adminEmail: "admin@example.com",
-  adminPassword: "admin",
-  logoUrl: "",
-  selectedTheme: "sneakers",
-  showTopBar: true,
-  topBarText: "عرض خاص لفترة محدودة — شحن سريع وتوصيل للمنزل",
-  showTimer: true,
-  timerMinutes: 15,
-  showStockBar: true,
-  stockLeft: 7,
-  showBadge: true,
-  badgeText: "معاينة مجانية للمنتج قبل الدفع",
-  guaranteeBadgeText: "يشمل التوصيل والتغليف",
-  showRecentSales: true,
-  showStickyButton: true,
-  showSupportWhatsapp: true,
-  supportWhatsappNumber: "+201000000000",
-  activeCountry: "EG",
-  countries: DEFAULT_COUNTRIES,
-  productTitle: "حذاء مريح وخفيف للجري والمشي الطويل",
-  productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
-  gallery: [],
-  currentPrice: 320,
-  oldPrice: 500,
-  features: [
-    "خامات ممتازة ومرنة تمنح القدم تهوية وراحة تامة",
-    "نعل ممتص للصدمات ومقاوم للانزلاق في كل الأوقات",
-    "معاينة وقياس مجاني بالكامل قبل دفع أي مليم للمندوب"
-  ],
-  enableSizes: true,
-  sizes: "41, 42, 43, 44, 45",
-  enableColors: true,
-  colors: "أسود, كحلي, رمادي, أصفر",
-  showBundles: true,
-  bundles: [
-    { qty: 1, title: "قطعة واحدة", price: 320 },
-    { qty: 2, title: "قطعتان (باقة التوفير)", price: 580, badge: "الأكثر طلباً", savings: "وفر 60" }
-  ],
-  showGuarantee: true,
-  guaranteeText: "معاينة مجانية كاملة عند باب منزلك قبل السداد",
-  guaranteeSubtext: "يحق لك فحص الجودة وتجربة المقاس مع المندوب دون أي التزام",
-  showReviews: true,
-  reviews: [
-    { name: "محمود س.", comment: "ممتاز جداً وخامته مريحة ومطابق للوصف بالظبط.", rating: 5 }
-  ],
-  whatsappNumber: "+201000000000",
-  metaPixelId: "",
-  tiktokPixelId: "",
-  googlePixelId: ""
-};
+const SAMPLE_BUYERS = [
+  { name: "أحمد م.", city: "القاهرة", time: "منذ 4 دقائق" },
+  { name: "خالد ع.", city: "الرياض", time: "منذ دقيقتين" },
+  { name: "محمد س.", city: "الإسكندرية", time: "منذ 7 دقائق" },
+  { name: "سلطان د.", city: "جدة", time: "منذ 3 دقائق" }
+];
 
 export default function Home() {
-  const [config, setConfig] = useState<StoreConfig>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("store_config");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          let themeKey = parsed.selectedTheme;
-          if (themeKey === "royal") themeKey = "perfume";
-          if (themeKey === "obsidian") themeKey = "sneakers";
-          if (themeKey === "silk") themeKey = "fashion";
-          if (themeKey === "clinical") themeKey = "medical";
-          return {
-            ...DEFAULT_CONFIG,
-            ...parsed,
-            selectedTheme: themeKey || "sneakers",
-            countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
-          };
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-    return DEFAULT_CONFIG;
-  });
-
+  const [config, setConfig] = useState<StoreConfig | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string>("");
   const [selectedQty, setSelectedQty] = useState<number>(1);
-  const [selectedSize, setSelectedSize] = useState<string>(() => {
-    if (config.enableSizes && config.sizes) {
-      const sList = config.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
-      return sList[0] || "41";
-    }
-    return "41";
-  });
-  const [selectedColor, setSelectedColor] = useState<string>(() => {
-    if (config.enableColors && config.colors) {
-      const cList = config.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
-      return cList[0] || "أسود";
-    }
-    return "أسود";
-  });
-  const [selectedProvince, setSelectedProvince] = useState<string>(() => {
-    const activeC = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
-    const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
-    return firstActiveProv ? firstActiveProv.name : "القاهرة";
-  });
-
-  const [timeLeft, setTimeLeft] = useState({ minutes: 11, seconds: 40 });
-  const [recentSale, setRecentSale] = useState<{ name: string; city: string } | null>(null);
-
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string>("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [altPhone, setAltPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState<any | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ minutes: 15, seconds: 0 });
+  const [recentBuyer, setRecentBuyer] = useState<any | null>(null);
 
   useEffect(() => {
-    fetch('/api/store')
-      .then(res => res.json())
-      .then(cloudData => {
-        if (cloudData && Object.keys(cloudData).length > 0) {
-          localStorage.setItem("store_config", JSON.stringify(cloudData));
-          applyStoreConfig(cloudData);
+    fetch("/api/store")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Object.keys(data).length > 0) {
+          setConfig(data);
+          setSelectedImage(data.productImage);
+          if (data.timerMinutes) {
+            setTimeLeft({ minutes: data.timerMinutes, seconds: 0 });
+          }
+          if (data.enableSizes && data.sizes) {
+            setSelectedSize(data.sizes.split(",")[0]?.trim() || "");
+          }
+          if (data.enableColors && data.colors) {
+            setSelectedColor(data.colors.split(",")[0]?.trim() || "");
+          }
+          const currentCountry = data.countries?.[data.activeCountry];
+          const firstProv = currentCountry?.provinces?.find((p: any) => p.enabled);
+          if (firstProv) setSelectedProvinceId(firstProv.id);
+
+          // 1. حقن Meta Pixel
+          if (data.metaPixelId && !window.fbq) {
+            const s = document.createElement("script");
+            s.innerHTML = `
+              !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+              n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '${data.metaPixelId}');
+              fbq('track', 'PageView');
+            `;
+            document.head.appendChild(s);
+          }
+
+          // 2. حقن TikTok Pixel
+          if (data.tiktokPixelId && !window.ttq) {
+            const s = document.createElement("script");
+            s.innerHTML = `
+              !function (w, d, t) {
+                w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+                ttq.load('${data.tiktokPixelId}');
+                ttq.page();
+              }(window, document, 'ttq');
+            `;
+            document.head.appendChild(s);
+          }
+
+          // 3. حقن Google Tag
+          if (data.googlePixelId && !window.gtag) {
+            const s1 = document.createElement("script");
+            s1.async = true;
+            s1.src = `https://www.googletagmanager.com/gtag/js?id=${data.googlePixelId}`;
+            document.head.appendChild(s1);
+
+            const s2 = document.createElement("script");
+            s2.innerHTML = `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${data.googlePixelId}');
+            `;
+            document.head.appendChild(s2);
+          }
         }
       })
-      .catch((err) => console.error("Cloud sync notice:", err));
-
-    function applyStoreConfig(data: any) {
-      let themeKey = data.selectedTheme;
-      if (themeKey === "royal") themeKey = "perfume";
-      if (themeKey === "obsidian") themeKey = "sneakers";
-      if (themeKey === "silk") themeKey = "fashion";
-      if (themeKey === "clinical") themeKey = "medical";
-
-      const merged: StoreConfig = {
-        ...DEFAULT_CONFIG,
-        ...data,
-        selectedTheme: themeKey || "sneakers",
-        countries: { ...DEFAULT_COUNTRIES, ...(data.countries || {}) }
-      };
-      setConfig(merged);
-
-      if (merged.enableSizes && merged.sizes) {
-        const sList = merged.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
-        if (sList.length > 0) setSelectedSize((prev) => sList.includes(prev) ? prev : sList[0]);
-      }
-      if (merged.enableColors && merged.colors) {
-        const cList = merged.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
-        if (cList.length > 0) setSelectedColor((prev) => cList.includes(prev) ? prev : cList[0]);
-      }
-
-      const activeC = merged.countries[merged.activeCountry] || DEFAULT_COUNTRIES.EG;
-      const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
-      if (firstActiveProv) setSelectedProvince((prev) => prev || firstActiveProv.name);
-    }
+      .catch((err) => console.error(err));
   }, []);
 
+  // عداد التنازل الديناميكي
   useEffect(() => {
-    if (config.googlePixelId) {
-      const gScript = document.createElement("script");
-      gScript.async = true;
-      gScript.src = `https://www.googletagmanager.com/gtag/js?id=${config.googlePixelId}`;
-      document.head.appendChild(gScript);
-
-      const inlineScript = document.createElement("script");
-      inlineScript.innerHTML = `
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', '${config.googlePixelId}');
-      `;
-      document.head.appendChild(inlineScript);
-    }
-  }, [config.googlePixelId]);
-
-  useEffect(() => {
-    if (!config.showTimer) return;
-    const timer = setInterval(() => {
+    if (!config?.showTimer) return;
+    const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
         if (prev.minutes > 0) return { minutes: prev.minutes - 1, seconds: 59 };
-        return { minutes: 11, seconds: 40 };
+        return { minutes: 0, seconds: 0 };
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, [config.showTimer]);
-
-  useEffect(() => {
-    if (!config.showRecentSales) return;
-    const activeC = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
-    const provs = activeC.provinces?.filter((p) => p.enabled).map((p) => p.name) || ["المدينة"];
-    const names = ["كريم", "أحمد", "عمر", "محمود", "يوسف", "خالد", "عبدالله"];
-
-    const interval = setInterval(() => {
-      const rName = names[Math.floor(Math.random() * names.length)];
-      const rCity = provs[Math.floor(Math.random() * provs.length)];
-      setRecentSale({ name: rName, city: rCity });
-      setTimeout(() => setRecentSale(null), 5000);
-    }, 24000);
-
     return () => clearInterval(interval);
-  }, [config.showRecentSales, config.activeCountry, config.countries]);
+  }, [config?.showTimer]);
+
+  // منبّه المبيعات الحية (Recent Sales Toast)
+  useEffect(() => {
+    if (!config?.showRecentSales) return;
+    const interval = setInterval(() => {
+      const randomBuyer = SAMPLE_BUYERS[Math.floor(Math.random() * SAMPLE_BUYERS.length)];
+      setRecentBuyer(randomBuyer);
+      setTimeout(() => setRecentBuyer(null), 4500);
+    }, 14000);
+    return () => clearInterval(interval);
+  }, [config?.showRecentSales]);
+
+  if (!config) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-amber-400 font-bold" dir="rtl">
+        جاري تحميل المتجر...
+      </div>
+    );
+  }
 
   const theme = THEME_STYLES[config.selectedTheme] || THEME_STYLES.sneakers;
+  const activeCountry = config.countries[config.activeCountry];
+  const activeProvince = activeCountry?.provinces.find((p) => p.id === selectedProvinceId);
+  const shippingCost = activeProvince?.shippingCost || 0;
 
-  const activeCountry = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
-  const enabledProvinces = activeCountry.provinces?.filter((p) => p.enabled) || [];
-  const activeProvObj = enabledProvinces.find((p) => p.name === selectedProvince);
-  const shippingCost = activeProvObj ? activeProvObj.shippingCost : 0;
-
-  const currentBundle = config.bundles.find((b) => b.qty === selectedQty) || {
-    qty: 1,
-    title: "قطعة واحدة",
-    price: config.currentPrice
-  };
-
-  const productSubtotal = config.showBundles ? currentBundle.price : config.currentPrice * selectedQty;
-  const finalTotal = productSubtotal + shippingCost;
-
-  const scrollToCheckout = () => {
-    document.getElementById("checkout-form")?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const sizeList = config.sizes ? config.sizes.split(/[,،]+/).map((s) => s.trim()).filter(Boolean) : [];
-  const colorList = config.colors ? config.colors.split(/[,،]+/).map((c) => c.trim()).filter(Boolean) : [];
+  let productPriceTotal = config.currentPrice * selectedQty;
+  if (config.showBundles && config.bundles?.length > 0) {
+    const matchedBundle = config.bundles.find((b) => b.qty === selectedQty);
+    if (matchedBundle) {
+      productPriceTotal = matchedBundle.price;
+    }
+  }
+  const grandTotal = productPriceTotal + shippingCost;
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !selectedProvince || !phone || !address) {
-      alert("يرجى ملء جميع الحقول الإلزامية");
+    if (!fullName.trim() || !phone.trim() || !address.trim()) {
+      alert("يرجى ملء جميع الحقول المطلوبة");
       return;
     }
 
     setIsSubmitting(true);
+    const orderId = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-    const orderData = {
-      fullName,
-      countryName: activeCountry.name,
-      governorate: selectedProvince,
-      shippingCost,
-      phone,
-      altPhone,
-      address,
-      notes,
-      selectedSize: config.enableSizes ? selectedSize : null,
-      selectedColor: config.enableColors ? selectedColor : null,
+    const orderPayload = {
+      id: orderId,
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      altPhone: altPhone.trim(),
+      governorate: activeProvince?.name || "",
+      address: address.trim(),
+      notes: notes.trim(),
       qty: selectedQty,
-      subtotal: productSubtotal,
-      total: finalTotal,
-      currency: activeCountry.currency,
-      date: new Date().toISOString()
+      selectedSize: config.enableSizes ? selectedSize : undefined,
+      selectedColor: config.enableColors ? selectedColor : undefined,
+      total: grandTotal,
+      currency: activeCountry?.currency || "ج.م"
     };
 
-    // 1. إرسال الطلب سحابياً وتخزينه في KV فوراً
     try {
-      await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload)
       });
+      const data = await res.json();
+
+      if (res.ok) {
+        setOrderSuccess(orderPayload);
+
+        // إرسال لـ Meta بالتزامن مع CAPI
+        if (window.fbq && config.metaPixelId) {
+          window.fbq("track", "Purchase", {
+            currency: activeCountry?.currency || "EGP",
+            value: grandTotal,
+            content_name: config.productTitle
+          }, { eventID: orderId });
+        }
+
+        // إرسال لـ TikTok
+        if (window.ttq && config.tiktokPixelId) {
+          window.ttq.track("CompletePayment", {
+            content_name: config.productTitle,
+            value: grandTotal,
+            currency: activeCountry?.currency || "EGP"
+          });
+        }
+
+        // إرسال لـ Google Tag
+        if (window.gtag && config.googlePixelId) {
+          window.gtag("event", "purchase", {
+            transaction_id: orderId,
+            value: grandTotal,
+            currency: activeCountry?.currency || "EGP"
+          });
+        }
+      } else {
+        alert(data.error || "تعذر إرسال الطلب");
+      }
     } catch (err) {
-      console.error("Failed to sync order to cloud KV", err);
-    }
-
-    // 2. حفظ نسخة احتياطية في متصفح العميل
-    const existingOrders = JSON.parse(localStorage.getItem("store_orders") || "[]");
-    localStorage.setItem("store_orders", JSON.stringify([orderData, ...existingOrders]));
-
-    if (typeof (window as any).gtag === "function" && config.googlePixelId) {
-      (window as any).gtag("event", "purchase", {
-        value: finalTotal,
-        currency: activeCountry.currency
-      });
-    }
-
-    setIsSubmitting(false);
-    setOrderSuccess(true);
-
-    // 3. التوجيه للواتساب بالرقم الدولي الصحيح
-    if (config.whatsappNumber) {
-      let spec = "";
-      if (config.enableSizes && selectedSize) spec += `%0A- المقاس: ${selectedSize}`;
-      if (config.enableColors && selectedColor) spec += `%0A- اللون: ${selectedColor}`;
-
-      const msg = `طلب جديد:%0A- الاسم: ${fullName}%0A- الدولة: ${activeCountry.name}%0A- المحافظة: ${selectedProvince}%0A- العنوان: ${address}${spec}%0A- الكمية: ${selectedQty}%0A- الإجمالي: ${finalTotal} ${activeCountry.currency}%0A- الهاتف: ${phone}${altPhone ? ` (بديل: ${altPhone})` : ""}${notes ? `%0A- ملاحظات: ${notes}` : ""}`;
-      
-      let cleanPhone = config.whatsappNumber.replace(/[^0-9]/g, "");
-      if (cleanPhone.startsWith("01")) cleanPhone = "2" + cleanPhone;
-
-      window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
+      alert("تعذر الاتصال بالخادم");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (orderSuccess) {
     return (
-      <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
-        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border p-8 rounded-3xl max-w-sm w-full text-center space-y-5 shadow-2xl">
-          <div style={{ backgroundColor: theme.accent, color: theme.accentText }} className="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-lg">
+      <div className={`min-h-screen ${theme.bg} text-white flex items-center justify-center p-4 font-sans`} dir="rtl">
+        <div className={`${theme.cardBg} border border-emerald-500/30 p-8 rounded-3xl max-w-md w-full text-center space-y-5 shadow-2xl`}>
+          <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
             ✓
           </div>
-          <p style={{ color: theme.accent }} className="text-[11px] font-mono tracking-widest uppercase">ORDER CONFIRMED</p>
-          <h2 className="text-2xl font-black">تم تسجيل طلبك بنجاح!</h2>
-          <p style={{ color: theme.textMuted }} className="text-xs leading-relaxed">
-            شكراً لطلبك يا {fullName}. سنتواصل معك لتأكيد موعد المعاينة والتسليم عند باب المنزل دون دفع مسبق.
+          <h2 className="text-2xl font-black text-emerald-400">تم استلام طلبك بنجاح!</h2>
+          <p className="text-xs text-neutral-300">
+            شكراً لك <span className="text-white font-bold">{orderSuccess.fullName}</span>، سيتواصل معك فريق خدمة العملاء قريباً لتأكيد الشحن.
           </p>
-          <div style={{ borderColor: theme.border }} className="border-t pt-4 text-xs">
-            المستحق عند الاستلام: <b style={{ color: theme.accent }} className="text-base">{finalTotal} {activeCountry.currency}</b>
+          <div className={`p-4 rounded-2xl ${theme.bg} ${theme.border} border text-xs text-right space-y-1.5 text-neutral-400`}>
+            <p>رقم الطلب: <span className="font-mono text-white">{orderSuccess.id}</span></p>
+            <p>المنتج: <span className="text-white">{config.productTitle}</span></p>
+            <p>الكمية: <span className="text-white">{orderSuccess.qty}</span></p>
+            <p>الإجمالي المطلوب: <span className={`${theme.primaryText} font-bold`}>{orderSuccess.total} {orderSuccess.currency}</span></p>
           </div>
-          <button
-            onClick={() => setOrderSuccess(false)}
-            style={{ backgroundColor: theme.accent, color: theme.accentText }}
-            className="w-full font-bold py-3 rounded-2xl text-xs shadow-md transition"
+          <a
+            href={`https://wa.me/${config.whatsappNumber?.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`مرحباً، أود الاستفسار عن طلبي رقم: ${orderSuccess.id}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-sm transition"
           >
-            العودة للمتجر
-          </button>
+            متابعة الطلب عبر واتساب ↗
+          </a>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
-      
+    <div className={`min-h-screen ${theme.bg} text-neutral-100 font-sans pb-28`} dir="rtl">
+      {/* 1. الشريط العلوي */}
       {config.showTopBar && (
-        <div style={{ backgroundColor: theme.accent, color: theme.accentText }} className="py-2.5 px-4 text-xs font-bold text-center sticky top-0 z-50 shadow-md flex items-center justify-center gap-3">
-          <button onClick={scrollToCheckout} className="flex items-center gap-1 font-black underline underline-offset-4 hover:opacity-80 transition text-[11px]">
-            <span>اطلب الآن ←</span>
-          </button>
-          <span className="opacity-95">• {config.topBarText} •</span>
-          {config.showTimer && (
-            <span className="font-mono text-[11px] font-black tracking-wider bg-black/20 text-white px-2 py-0.5 rounded">
-              {String(timeLeft.minutes).padStart(2, "0")} : {String(timeLeft.seconds).padStart(2, "0")}
-            </span>
-          )}
+        <div className={`${theme.primary} text-xs font-black py-2.5 text-center px-4 transition`}>
+          {config.topBarText}
         </div>
       )}
 
-      <header style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.3)" }} className="border-b backdrop-blur-md sticky top-8 z-40">
-        <div className="max-w-3xl mx-auto px-5 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={config.storeName} className="h-9 object-contain" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <span style={{ borderColor: theme.accent, color: theme.accent }} className="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-black shadow-sm">
-                  {config.storeName.charAt(0)}
-                </span>
-                <span className="font-black tracking-wide text-sm">{config.storeName}</span>
-              </div>
-            )}
+      {/* 2. ترويسة المتجر */}
+      <header className={`border-b ${theme.border} bg-neutral-900/40 backdrop-blur sticky top-0 z-40 px-4 py-3`}>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {config.logoUrl && <img src={config.logoUrl} alt="Logo" className="h-7 w-auto object-contain" />}
+            <span className="font-black text-sm tracking-wide text-white">{config.storeName}</span>
           </div>
-          <button
-            onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent, color: theme.accentText }}
-            className="font-black px-4 py-1.5 rounded-full text-xs shadow-md hover:opacity-90 transition"
-          >
-            اطلب الآن ←
-          </button>
+          <span className="text-[11px] bg-neutral-800/80 text-neutral-300 px-3 py-1 rounded-full font-bold">
+            {activeCountry?.name} ({activeCountry?.currency})
+          </span>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 pt-4 space-y-6">
-        
-        <div className="text-center space-y-1.5 pt-0">
-          <h1 style={{ color: theme.textMain }} className="text-xl sm:text-2xl font-black leading-snug px-2 m-0">
-            {config.productTitle}
-          </h1>
-
-          <div className="flex items-center justify-center gap-3 py-1" dir="rtl">
-            <span style={{ color: theme.accent }} className="text-3xl sm:text-4xl font-black">
-              {config.currentPrice} {activeCountry.currency}
-            </span>
-            {config.oldPrice > config.currentPrice && (
-              <span style={{ color: theme.textMuted }} className="line-through text-base sm:text-lg opacity-60">
-                {config.oldPrice} {activeCountry.currency}
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* 3. معرض الصور */}
+        <div className="space-y-3">
+          <div className={`aspect-square ${theme.cardBg} rounded-3xl overflow-hidden border ${theme.border} relative shadow-xl`}>
+            <img src={selectedImage || config.productImage} alt={config.productTitle} className="w-full h-full object-cover" />
+            {config.showBadge && (
+              <span className={`absolute top-4 right-4 ${theme.badgeBg} text-xs font-black px-3.5 py-1.5 rounded-full shadow-lg`}>
+                {config.badgeText}
               </span>
             )}
           </div>
-
-          <div className="pt-0.5">
-            <button
-              onClick={scrollToCheckout}
-              style={{ backgroundColor: theme.accent, color: theme.accentText }}
-              className="px-8 py-2.5 rounded-full text-xs sm:text-sm font-black shadow-lg hover:opacity-95 transition"
-            >
-              اطلب الآن — الدفع عند الاستلام بعد المعاينة ←
-            </button>
-          </div>
-        </div>
-
-        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border rounded-3xl overflow-hidden shadow-2xl">
-          <img src={config.productImage} alt={config.productTitle} className="w-full h-80 sm:h-96 object-cover" />
-          
-          {config.showBadge && (
-            <div style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "#f1f5f9" : "rgba(0,0,0,0.55)" }} className="p-4 border-t flex items-center justify-between text-xs">
-              <span style={{ color: theme.textMain }} className="font-bold">{config.badgeText || "معاينة مجانية للمنتج قبل الدفع"}</span>
-              {config.guaranteeBadgeText && (
-                <span style={{ color: theme.accent, borderColor: theme.border }} className="border px-3 py-1 rounded-full text-[11px] font-bold">
-                  {config.guaranteeBadgeText}
-                </span>
-              )}
+          {config.gallery?.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedImage(config.productImage)}
+                className={`w-16 h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 ${selectedImage === config.productImage ? theme.accent : theme.border}`}
+              >
+                <img src={config.productImage} alt="Main" className="w-full h-full object-cover" />
+              </button>
+              {config.gallery.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedImage(g.image)}
+                  className={`w-16 h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 ${selectedImage === g.image ? theme.accent : theme.border}`}
+                >
+                  <img src={g.image} alt="Thumb" className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {config.showStockBar && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm">
-            <div className="flex items-center gap-2 text-red-500 font-bold">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              <span>إصدار محدود — متبقي {config.stockLeft} قطع فقط للدفعة الحالية</span>
-            </div>
-            <div className="w-full sm:w-44 h-2 bg-black/10 rounded-full overflow-hidden">
-              <div style={{ width: `${Math.min(100, Math.max(15, config.stockLeft * 12))}%`, backgroundColor: theme.accent }} className="h-full rounded-full" />
-            </div>
-          </div>
-        )}
-
-        {(config.enableSizes || config.enableColors) && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-6 shadow-sm space-y-5">
-            
-            {config.enableSizes && sizeList.length > 0 && (
-              <div className="space-y-2.5">
-                <label style={{ color: theme.textMuted }} className="block text-xs font-bold">
-                  المقاس المختار: <b style={{ color: theme.accent }}>{selectedSize}</b>
-                </label>
-                <div className="flex flex-wrap gap-2.5">
-                  {sizeList.map((size) => {
-                    const active = selectedSize === size;
-                    return (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => setSelectedSize(size)}
-                        style={{
-                          borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? theme.accent : (theme.isLight ? "#f8fafc" : "transparent"),
-                          color: active ? theme.accentText : theme.textMain
-                        }}
-                        className="border min-w-[50px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition shadow-sm"
-                      >
-                        {size}
-                      </button>
-                    );
-                  })}
-                </div>
+        {/* 4. العداد وشريط المخزون */}
+        {(config.showTimer || config.showStockBar) && (
+          <div className={`grid grid-cols-2 gap-3 ${theme.cardBg} border ${theme.border} p-3.5 rounded-2xl`}>
+            {config.showTimer && (
+              <div className={`text-center border-l ${theme.border} pl-2`}>
+                <span className="text-[10px] text-neutral-400 block font-bold">ينتهي العرض المؤقت خلال</span>
+                <span className={`text-sm font-black ${theme.primaryText} font-mono`}>
+                  {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
+                </span>
               </div>
             )}
-
-            {config.enableColors && colorList.length > 0 && (
-              <div className="space-y-2.5">
-                <label style={{ color: theme.textMuted }} className="block text-xs font-bold">
-                  اللون المختار: <b style={{ color: theme.accent }}>{selectedColor}</b>
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  {colorList.map((colorName) => {
-                    const active = selectedColor === colorName;
-                    const swatch = resolveColorSwatch(colorName);
-
-                    return (
-                      <button
-                        key={colorName}
-                        type="button"
-                        onClick={() => setSelectedColor(colorName)}
-                        style={{
-                          borderColor: active ? theme.accent : theme.border,
-                          backgroundColor: active ? (theme.isLight ? "#f1f5f9" : "rgba(255,255,255,0.08)") : "transparent"
-                        }}
-                        className={`flex items-center gap-2.5 border-2 px-3.5 py-2 rounded-2xl transition shadow-sm ${
-                          active ? "scale-105" : "opacity-80"
-                        }`}
-                      >
-                        <span
-                          style={{
-                            backgroundColor: swatch.bg,
-                            borderColor: swatch.border !== "transparent" ? swatch.border : "rgba(0,0,0,0.15)"
-                          }}
-                          className="w-5 h-5 rounded-full border shadow-inner flex-shrink-0"
-                        />
-                        <span style={{ color: active ? theme.accent : theme.textMain }} className="text-xs font-bold">
-                          {colorName}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+            {config.showStockBar && (
+              <div className="text-center pr-2">
+                <span className="text-[10px] text-neutral-400 block font-bold">المتبقي في المستودع</span>
+                <span className="text-sm font-black text-rose-400 font-mono">{config.stockLeft} قطع فقط</span>
               </div>
             )}
           </div>
         )}
 
-        <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
-          <h3 style={{ color: theme.accent }} className="font-extrabold text-sm">مميزات وتفاصيل الجودة:</h3>
-          <ul className="space-y-2.5 text-xs sm:text-sm">
-            {config.features.map((f, i) => (
-              <li key={i} className="flex items-start gap-2.5">
-                <span style={{ color: theme.accent }} className="font-black">✓</span>
-                <span style={{ color: theme.textMain }} className="opacity-95">{f}</span>
-              </li>
-            ))}
-          </ul>
+        {/* 5. تفاصيل السعر والاسم */}
+        <div className="space-y-2">
+          <h1 className="text-lg sm:text-xl font-black text-white leading-snug">{config.productTitle}</h1>
+          <div className="flex items-baseline gap-3">
+            <span className={`text-2xl font-black ${theme.primaryText} font-mono`}>
+              {config.currentPrice} {activeCountry?.currency}
+            </span>
+            {config.oldPrice > config.currentPrice && (
+              <span className="text-xs text-neutral-500 line-through font-mono">
+                {config.oldPrice} {activeCountry?.currency}
+              </span>
+            )}
+          </div>
         </div>
 
-        {config.gallery && config.gallery.length > 0 && (
-          <div className="space-y-4">
-            <h3 style={{ color: theme.textMain }} className="font-black text-base text-center">تفاصيل المنتج عن قرب:</h3>
-            <div className="grid grid-cols-1 gap-4">
-              {config.gallery.map((g) => (
-                <div key={g.id} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl overflow-hidden shadow-lg">
-                  <img src={g.image} alt="تفاصيل المنتج" className="w-full h-64 sm:h-80 object-cover" />
-                  {g.caption && (
-                    <div style={{ borderColor: theme.border, color: theme.textMain }} className="p-4 border-t text-xs sm:text-sm text-center font-bold">
-                      {g.caption}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {config.showBundles && (
-          <div className="space-y-3">
-            <h3 style={{ color: theme.textMain }} className="text-base font-extrabold text-center">عروض وباقات التوفير</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {config.bundles.map((b) => {
-                const isSelected = selectedQty === b.qty;
+        {/* 6. خيارات المقاسات والألوان */}
+        {config.enableSizes && config.sizes && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-neutral-300">المقاس المطلوب:</label>
+            <div className="flex flex-wrap gap-2">
+              {config.sizes.split(",").map((s) => {
+                const val = s.trim();
                 return (
-                  <div
-                    key={b.qty}
-                    onClick={() => setSelectedQty(b.qty)}
-                    style={{
-                      borderColor: isSelected ? theme.accent : theme.border,
-                      backgroundColor: isSelected ? (theme.isLight ? "#f0f9ff" : "rgba(255,255,255,0.06)") : theme.cardBg
-                    }}
-                    className="cursor-pointer border-2 rounded-2xl p-4 text-center relative transition shadow-sm"
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setSelectedSize(val)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${selectedSize === val ? `${theme.primary} border-transparent` : `${theme.cardBg}${theme.border} text-neutral-300`}`}
                   >
-                    {b.badge && (
-                      <span style={{ backgroundColor: theme.accent, color: theme.accentText }} className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-black px-3 py-0.5 rounded-full shadow-md">
-                        {b.badge}
-                      </span>
-                    )}
-                    <p className="font-extrabold text-sm">{b.title}</p>
-                    <p style={{ color: theme.accent }} className="text-2xl font-black font-sans my-1">
-                      {b.price} {activeCountry.currency}
-                    </p>
-                    {b.savings && <p style={{ color: theme.textMuted }} className="text-[11px] font-bold">{b.savings} {activeCountry.currency}</p>}
-                  </div>
+                    {val}
+                  </button>
                 );
               })}
             </div>
           </div>
         )}
 
-        <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
-          <div className="text-center space-y-1 border-b pb-4" style={{ borderColor: theme.border }}>
-            <h2 style={{ color: theme.textMain }} className="text-xl font-black">أدخل بياناتك لاستلام ومعاينة الطلب</h2>
-            <p style={{ color: theme.textMuted }} className="text-xs">الدفع نقداً عند الاستلام بعد فحص المنتج وتجربته</p>
+        {config.enableColors && config.colors && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-neutral-300">اللون:</label>
+            <div className="flex flex-wrap gap-2">
+              {config.colors.split(",").map((c) => {
+                const val = c.trim();
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setSelectedColor(val)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${selectedColor === val ? `${theme.primary} border-transparent` : `${theme.cardBg}${theme.border} text-neutral-300`}`}
+                  >
+                    {val}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 7. باقات التوفير */}
+        {config.showBundles && config.bundles?.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-neutral-300">اختر العرض الأنسب لك:</label>
+            <div className="space-y-2">
+              {config.bundles.map((b) => (
+                <div
+                  key={b.qty}
+                  onClick={() => setSelectedQty(b.qty)}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer flex items-center justify-between transition ${selectedQty === b.qty ? `${theme.accent} bg-white/5` : `${theme.border}${theme.cardBg}`}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <input type="radio" checked={selectedQty === b.qty} readOnly className="accent-amber-500" />
+                    <div>
+                      <p className="text-xs font-bold text-white">{b.title}</p>
+                      {b.savings && <p className="text-[10px] text-emerald-400 font-bold">{b.savings}</p>}
+                    </div>
+                  </div>
+                  <div className="text-left">
+                    <span className={`text-sm font-black ${theme.primaryText} font-mono`}>{b.price} {activeCountry?.currency}</span>
+                    {b.badge && <span className={`block text-[9px] ${theme.badgeBg} px-2 py-0.5 rounded font-black mt-0.5`}>{b.badge}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 8. مميزات المنتج */}
+        {config.features?.length > 0 && (
+          <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl space-y-2.5`}>
+            <h3 className={`text-xs font-bold ${theme.primaryText}`}>مميزات ومواصفات المنتج:</h3>
+            <ul className="space-y-1.5 text-xs text-neutral-300 list-disc list-inside">
+              {config.features.map((feat, idx) => (
+                <li key={idx}>{feat}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 9. آراء وتقييمات العملاء */}
+        {config.showReviews && config.reviews?.length > 0 && (
+          <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl space-y-3`}>
+            <h3 className={`text-xs font-bold ${theme.primaryText}`}>آراء وتقييمات العملاء:</h3>
+            <div className="space-y-2.5">
+              {config.reviews.map((rev, idx) => (
+                <div key={idx} className={`p-3 rounded-xl border ${theme.border} ${theme.bg} space-y-1`}>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-white">{rev.name}</span>
+                    <span className="text-amber-400 font-bold">{"★".repeat(rev.rating || 5)}</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400">{rev.comment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 10. استمارة تسجيل الطلب */}
+        <div id="order-form" className={`${theme.cardBg} border ${theme.border} p-5 rounded-3xl space-y-4 shadow-xl`}>
+          <div className={`border-b ${theme.border} pb-3`}>
+            <h2 className={`text-base font-black ${theme.primaryText}`}>بيانات التوصيل والشحن للمنزل</h2>
+            <p className="text-[11px] text-neutral-400">الدفع نقداً عند استلام وفحص المنتج أمام المندوب</p>
           </div>
 
-          <form onSubmit={handleSubmitOrder} className="space-y-4">
+          <form onSubmit={handleSubmitOrder} className="space-y-3">
             <div>
-              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">الاسم بالكامل *</label>
+              <label className="block text-xs text-neutral-300 mb-1 font-bold">الاسم ثلاثي *</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="اكتب اسمك الثلاثي"
-                style={{
-                  borderColor: theme.inputBorder,
-                  backgroundColor: theme.inputBg,
-                  color: theme.textMain
-                }}
-                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none"
+                placeholder="اكتب اسمك كاملاً"
+                className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white focus:outline-none`}
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-neutral-300 mb-1 font-bold">رقم الهاتف *</label>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="رقم الهاتف للتواصل"
+                  className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white font-mono focus:outline-none`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-300 mb-1">رقم هاتف بديل (اختياري)</label>
+                <input
+                  type="tel"
+                  value={altPhone}
+                  onChange={(e) => setAltPhone(e.target.value)}
+                  placeholder="رقم هاتف آخر احتياطي"
+                  className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white font-mono focus:outline-none`}
+                />
+              </div>
+            </div>
+
             <div>
-              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">
-                المحافظة أو المدينة ({activeCountry.name}) *
-              </label>
+              <label className="block text-xs text-neutral-300 mb-1 font-bold">المحافظة / المدينة *</label>
               <select
-                required
-                value={selectedProvince}
-                onChange={(e) => setSelectedProvince(e.target.value)}
-                style={{
-                  borderColor: theme.inputBorder,
-                  backgroundColor: theme.inputBg,
-                  color: theme.textMain
-                }}
-                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none"
+                value={selectedProvinceId}
+                onChange={(e) => setSelectedProvinceId(e.target.value)}
+                className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white focus:outline-none`}
               >
-                {enabledProvinces.map((p) => (
-                  <option key={p.id} value={p.name} className={theme.isLight ? "bg-white text-slate-900" : "bg-neutral-900 text-white"}>
-                    {p.name} {p.shippingCost === 0 ? "(شحن مجاني ومعاينة)" : `(شحن: ${p.shippingCost} ${activeCountry.currency})`}
+                {activeCountry?.provinces.filter((p) => p.enabled).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.shippingCost > 0 ? `(+${p.shippingCost} ${activeCountry.currency} شحن)` : "(شحن مجاني)"}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">رقم الهاتف للتواصل *</label>
-                <div className="flex items-center gap-1.5" dir="ltr">
-                  <span style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMuted }} className="border text-xs px-3 py-3 rounded-xl font-mono">
-                    {activeCountry.phoneCode}
-                  </span>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="رقم الهاتف"
-                    style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMain }}
-                    className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm text-left focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">رقم بديل (اختياري)</label>
-                <div className="flex items-center gap-1.5" dir="ltr">
-                  <span style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMuted }} className="border text-xs px-3 py-3 rounded-xl font-mono">
-                    {activeCountry.phoneCode}
-                  </span>
-                  <input
-                    type="tel"
-                    value={altPhone}
-                    onChange={(e) => setAltPhone(e.target.value)}
-                    placeholder="رقم آخر إن وجد"
-                    style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMain }}
-                    className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm text-left focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
             <div>
-              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">العنوان بالتفصيل *</label>
+              <label className="block text-xs text-neutral-300 mb-1 font-bold">العنوان بالتفصيل *</label>
               <input
                 type="text"
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="الحي، اسم الشارع، رقم العقار أو علامة مميزة"
-                style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMain }}
-                className="w-full border rounded-xl px-4 py-3 text-xs sm:text-sm focus:outline-none"
+                placeholder="المنطقة، اسم الشارع، رقم العقار والشقة"
+                className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white focus:outline-none`}
               />
             </div>
 
             <div>
-              <label style={{ color: theme.textMuted }} className="block text-xs mb-1 font-bold">ملاحظات خاصة بالتوصيل (اختياري)</label>
-              <textarea
-                rows={2}
+              <label className="block text-xs text-neutral-400 mb-1">ملاحظات للمندوب</label>
+              <input
+                type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="أي ملاحظة تود إبلاغ المندوب بها"
-                style={{ borderColor: theme.inputBorder, backgroundColor: theme.inputBg, color: theme.textMain }}
-                className="w-full border rounded-xl px-4 py-2.5 text-xs focus:outline-none resize-none"
+                placeholder="أي تعليمات خاصة بموعد التسليم"
+                className={`w-full ${theme.bg} border ${theme.border} rounded-xl p-3 text-xs text-white focus:outline-none`}
               />
             </div>
 
-            <div style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "#f8fafc" : "rgba(0,0,0,0.25)" }} className="p-4 rounded-2xl border space-y-2 text-xs">
-              <div className="flex justify-between" style={{ color: theme.textMuted }}>
-                <span>قيمة الطلب:</span>
-                <span className="font-mono">{productSubtotal} {activeCountry.currency}</span>
+            {/* ملخص السعر */}
+            <div className={`${theme.bg} p-3.5 rounded-xl border ${theme.border} space-y-1.5 text-xs`}>
+              <div className="flex justify-between text-neutral-400">
+                <span>سعر الطلب:</span>
+                <span className="font-mono text-white">{productPriceTotal} {activeCountry?.currency}</span>
               </div>
-              <div className="flex justify-between" style={{ color: theme.textMuted }}>
-                <span>مصاريف الشحن:</span>
-                <span className={shippingCost === 0 ? "font-bold text-emerald-500" : "font-mono"}>
-                  {shippingCost === 0 ? "مجاناً بالكامل" : `${shippingCost} ${activeCountry.currency}`}
+              <div className="flex justify-between text-neutral-400">
+                <span>تكلفة الشحن:</span>
+                <span className="font-mono text-white">
+                  {shippingCost > 0 ? `${shippingCost} ${activeCountry?.currency}` : "مجاني"}
                 </span>
               </div>
-              <div style={{ borderColor: theme.border }} className="border-t pt-2 flex justify-between items-center font-bold">
-                <span style={{ color: theme.textMain }}>الإجمالي عند الاستلام:</span>
-                <span style={{ color: theme.accent }} className="text-2xl font-black font-sans">
-                  {finalTotal} {activeCountry.currency}
-                </span>
+              <div className={`flex justify-between text-sm font-black ${theme.primaryText} border-t ${theme.border} pt-2`}>
+                <span>المجموع النهائي:</span>
+                <span className="font-mono">{grandTotal} {activeCountry?.currency}</span>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{ backgroundColor: theme.accent, color: theme.accentText }}
-              className="w-full font-black text-sm sm:text-base py-4 rounded-2xl shadow-xl hover:opacity-95 transition flex items-center justify-center gap-2"
+              className={`w-full ${theme.primary} font-black py-4 rounded-xl text-base shadow-xl transition disabled:opacity-50`}
             >
-              {isSubmitting ? "جاري تسجيل طلبك..." : "تأكيد الطلب — الدفع بعد المعاينة عند الاستلام ←"}
+              {isSubmitting ? "جاري تسجيل الطلب..." : "تأكيد الطلب الآن 🛍️"}
             </button>
           </form>
-        </section>
+        </div>
 
+        {/* 11. قسم الضمان */}
         {config.showGuarantee && (
-          <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-            <span style={{ color: theme.accent }} className="text-3xl">🛡️</span>
-            <div>
-              <p style={{ color: theme.textMain }} className="font-extrabold text-xs sm:text-sm">{config.guaranteeText}</p>
-              {config.guaranteeSubtext && <p style={{ color: theme.textMuted }} className="text-[11px] mt-0.5">{config.guaranteeSubtext}</p>}
-            </div>
-          </div>
-        )}
-
-        {config.showReviews && config.reviews && config.reviews.length > 0 && (
-          <div className="space-y-3">
-            <h3 style={{ color: theme.textMain }} className="font-black text-sm">تجارب وآراء المشترين:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {config.reviews.map((r, i) => (
-                <div key={i} style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border p-4 rounded-2xl space-y-1.5 shadow-sm">
-                  <div className="flex justify-between items-center text-xs">
-                    <span style={{ color: theme.textMain }} className="font-black">{r.name}</span>
-                    <span style={{ color: theme.accent }}>{"★".repeat(r.rating)}</span>
-                  </div>
-                  <p style={{ color: theme.textMuted }} className="text-xs leading-relaxed">"{r.comment}"</p>
-                </div>
-              ))}
-            </div>
+          <div className="bg-emerald-950/20 border border-emerald-500/30 p-4 rounded-2xl text-center space-y-1">
+            <h4 className="text-xs font-bold text-emerald-400">{config.guaranteeText}</h4>
+            {config.guaranteeSubtext && <p className="text-[11px] text-neutral-400">{config.guaranteeSubtext}</p>}
           </div>
         )}
       </main>
 
-      {recentSale && (
-        <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accent }} className="fixed bottom-20 left-4 z-50 border p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs backdrop-blur-xl">
-          <div style={{ backgroundColor: `${theme.accent}20`, color: theme.accent }} className="w-8 h-8 rounded-full flex items-center justify-center font-black">
-            ✦
-          </div>
+      {/* 12. إشعار المبيعات اللحظية (Recent Sales Toast) */}
+      {recentBuyer && (
+        <div className="fixed bottom-20 left-4 z-50 bg-neutral-900 border border-neutral-700 text-white p-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs animate-fade-in">
+          <span className="text-emerald-400 text-lg">⚡</span>
           <div>
-            <p style={{ color: theme.textMain }} className="font-bold">أكد {recentSale.name} من {recentSale.city} طلبه</p>
-            <p style={{ color: theme.textMuted }} className="text-[10px]">منذ بضع دقائق</p>
+            <p className="font-bold">{recentBuyer.name} من {recentBuyer.city}</p>
+            <p className="text-[10px] text-neutral-400">اشترى للتو ({recentBuyer.time})</p>
           </div>
         </div>
       )}
 
+      {/* 13. زر الدعم الفني العائم لواتساب */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
-          href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، أود الاستفسار عن تفاصيل المنتج")}`}
+          href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}`}
           target="_blank"
-          rel="noopener noreferrer"
-          className="fixed bottom-24 right-4 z-50 w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white/80 transition transform hover:scale-110"
-          title="خدمة العملاء عبر واتساب"
+          rel="noreferrer"
+          className="fixed bottom-20 right-4 z-50 bg-emerald-600 hover:bg-emerald-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl text-2xl transition"
+          title="تواصل مع الدعم الفني"
         >
-          <span className="text-2xl">💬</span>
+          💬
         </a>
       )}
 
+      {/* 14. زر الشراء العائم للموبايل */}
       {config.showStickyButton && (
-        <div style={{ backgroundColor: theme.isLight ? "rgba(255,255,255,0.95)" : "rgba(10, 14, 20, 0.95)", borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3.5 backdrop-blur-xl border-t sm:hidden z-40">
+        <div className={`fixed bottom-0 left-0 right-0 p-3 bg-neutral-900/90 backdrop-blur border-t ${theme.border} z-40 max-w-2xl mx-auto flex items-center justify-between gap-3`}>
+          <div>
+            <span className="text-[10px] text-neutral-400 block">الإجمالي:</span>
+            <span className={`text-base font-black ${theme.primaryText} font-mono`}>{grandTotal} {activeCountry?.currency}</span>
+          </div>
           <button
-            onClick={scrollToCheckout}
-            style={{ backgroundColor: theme.accent, color: theme.accentText }}
-            className="w-full font-black py-3.5 rounded-2xl shadow-xl text-xs sm:text-sm tracking-wide"
+            onClick={() => document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" })}
+            className={`flex-1 ${theme.primary} font-black py-3 rounded-xl text-xs sm:text-sm shadow-lg transition`}
           >
-            اطلب الآن — الدفع عند الاستلام ({config.currentPrice} {activeCountry.currency})
+            اطلب الآن وادفع عند الاستلام
           </button>
         </div>
       )}
-
-      <footer style={{ borderColor: theme.border }} className="border-t py-8 text-center text-xs opacity-50 mt-16">
-        <p>جميع الحقوق محفوظة © {new Date().getFullYear()} {config.storeName}</p>
-      </footer>
     </div>
   );
 }
