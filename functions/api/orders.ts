@@ -7,6 +7,19 @@ async function verifyAuth(context: any): Promise<boolean> {
 
 export async function onRequestPost(context: any) {
   try {
+    const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
+    const floodKey = `flood:order:${clientIP}`;
+    
+    // منع السبام: حد أقصى طلبين كل 60 ثانية من نفس الـ IP
+    const recent = await context.env.STORE_KV.get(floodKey);
+    const count = recent ? parseInt(recent) : 0;
+    if (count >= 2) {
+      return new Response(JSON.stringify({ error: "مهلاً، تم استلام طلبك بالفعل. يرجى الانتظار قليلاً." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const orderData = await context.request.json();
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 7);
@@ -21,6 +34,7 @@ export async function onRequestPost(context: any) {
     };
 
     await context.env.STORE_KV.put(kvKey, JSON.stringify(completeRecord));
+    await context.env.STORE_KV.put(floodKey, (count + 1).toString(), { expirationTtl: 60 });
 
     return new Response(JSON.stringify({ success: true, id: orderId }), {
       headers: { "Content-Type": "application/json" }
@@ -97,3 +111,4 @@ export async function onRequestDelete(context: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
+
