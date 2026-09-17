@@ -1,4 +1,3 @@
-// تشفير كلمة السر بـ PBKDF2 مع توليد Salt عشوائي 16 بايت
 async function hashPBKDF2(password: string): Promise<string> {
   const salt = new Uint8Array(16);
   crypto.getRandomValues(salt);
@@ -16,7 +15,7 @@ async function hashPBKDF2(password: string): Promise<string> {
     {
       name: "PBKDF2",
       salt: salt,
-      iterations: 100000,
+      iterations: 210000,
       hash: "SHA-256"
     },
     keyMaterial,
@@ -61,12 +60,26 @@ export async function onRequestPost(context: any) {
     const existingRaw = await context.env.STORE_KV.get("STORE_CONFIG");
     const existing = existingRaw ? JSON.parse(existingRaw) : {};
 
+    // إذا تم تغيير كلمة السر: تشفير جديد بـ PBKDF2 + إبطال كافة الجلسات النشطة
     if (newData.adminPassword && newData.adminPassword.trim() !== "") {
       newData.adminPasswordHash = await hashPBKDF2(newData.adminPassword);
+      delete newData.adminPassword;
+
+      // إبطال ومسح جميع الجلسات القديمة من KV
+      try {
+        const sessionList = await context.env.STORE_KV.list({ prefix: "session:" });
+        for (const sKey of (sessionList.keys || [])) {
+          if (sKey.name !== `session:${token}`) {
+            await context.env.STORE_KV.delete(sKey.name);
+          }
+        }
+      } catch (e) {
+        console.error("Session cleanup error:", e);
+      }
     } else {
       newData.adminPasswordHash = existing.adminPasswordHash;
+      delete newData.adminPassword;
     }
-    delete newData.adminPassword;
 
     await context.env.STORE_KV.put("STORE_CONFIG", JSON.stringify(newData));
 
