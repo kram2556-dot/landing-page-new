@@ -39,6 +39,7 @@ export interface ReviewItem {
 
 export interface StoreConfig {
   storeName: string;
+  adminEmail: string;
   logoUrl: string;
   selectedTheme: ThemeType;
   showTopBar: boolean;
@@ -47,6 +48,9 @@ export interface StoreConfig {
   timerMinutes: number;
   showStockBar: boolean;
   stockLeft: number;
+  showBadge: boolean;
+  badgeText: string;
+  guaranteeBadgeText: string;
   showRecentSales: boolean;
   showStickyButton: boolean;
   showSupportWhatsapp: boolean;
@@ -73,6 +77,7 @@ export interface StoreConfig {
   whatsappNumber: string;
   metaPixelId: string;
   tiktokPixelId: string;
+  googlePixelId: string;
 }
 
 const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
@@ -121,6 +126,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
+  adminEmail: "admin@example.com",
   logoUrl: "",
   selectedTheme: "sneakers",
   showTopBar: true,
@@ -129,6 +135,9 @@ const DEFAULT_CONFIG: StoreConfig = {
   timerMinutes: 15,
   showStockBar: true,
   stockLeft: 7,
+  showBadge: true,
+  badgeText: "معاينة مجانية للمنتج قبل الدفع",
+  guaranteeBadgeText: "يشمل التوصيل والتغليف",
   showRecentSales: true,
   showStickyButton: true,
   showSupportWhatsapp: true,
@@ -163,7 +172,8 @@ const DEFAULT_CONFIG: StoreConfig = {
   ],
   whatsappNumber: "+201000000000",
   metaPixelId: "",
-  tiktokPixelId: ""
+  tiktokPixelId: "",
+  googlePixelId: ""
 };
 
 const THEMES_LIST = [
@@ -177,7 +187,7 @@ const THEMES_LIST = [
 
 export default function Admin() {
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
-  const [activeTab, setActiveTab] = useState<"product" | "themes" | "shipping" | "marketing" | "orders">("product");
+  const [activeTab, setActiveTab] = useState<"product" | "themes" | "shipping" | "marketing" | "settings" | "orders">("product");
   const [savedMsg, setSavedMsg] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
@@ -261,13 +271,14 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* أزرار التبويبات */}
+        {/* أزرار التبويبات الشاملة */}
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
             { id: "product", name: "المنتج والعروض" },
             { id: "themes", name: "ثيمات الألوان (6 ثيمات)" },
             { id: "shipping", name: "الشحن والمحافظات" },
-            { id: "marketing", name: "التسويق والبكسل" },
+            { id: "marketing", name: "التسويق والبكسل (ميتا/تيك توك/جوجل)" },
+            { id: "settings", name: "حساب الإدارة والأمان" },
             { id: "orders", name: `الطلبات (${orders.length})` }
           ].map((tab) => (
             <button
@@ -285,7 +296,7 @@ export default function Admin() {
         {/* 1. تبويب المنتج والعروض */}
         {activeTab === "product" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">بيانات المنتج الأساسية</h2>
+            <h2 className="font-bold text-base text-amber-400">بيانات المنتج وتفاصيل العرض</h2>
             
             <div className="space-y-4">
               <div>
@@ -299,7 +310,7 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">عنوان المنتج الرئيسي (العريض)</label>
+                <label className="block text-xs text-neutral-400 mb-1">عنوان المنتج الرئيسي</label>
                 <input
                   type="text"
                   value={config.productTitle}
@@ -330,7 +341,7 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">رابط صورة المنتج أو رفع من الجهاز</label>
+                <label className="block text-xs text-neutral-400 mb-1">رابط صورة المنتج أو رفع ملف</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -353,6 +364,46 @@ export default function Admin() {
                 </div>
               </div>
 
+              {/* التحكم الكامل في شريط كارت الصورة (المعاينة وبادج التوصيل) */}
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-amber-400 block">شريط أسفل صورة المنتج (المعاينة والبادج)</label>
+                    <span className="text-[10px] text-neutral-500">يمكنك إيقافه بالكامل، أو تعديل نصوصه، أو حذف البادج بمسح خانته</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={config.showBadge}
+                    onChange={(e) => setConfig({ ...config, showBadge: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                </div>
+                {config.showBadge && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">النص الأيمن (المعاينة)</label>
+                      <input
+                        type="text"
+                        value={config.badgeText}
+                        onChange={(e) => setConfig({ ...config, badgeText: e.target.value })}
+                        placeholder="معاينة مجانية للمنتج قبل الدفع"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">بادج الشحن والتغليف (اتركه فارغاً لإلغائه)</label>
+                      <input
+                        type="text"
+                        value={config.guaranteeBadgeText}
+                        onChange={(e) => setConfig({ ...config, guaranteeBadgeText: e.target.value })}
+                        placeholder="يشمل التوصيل والتغليف"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* المقاسات والألوان */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
                 <div className="space-y-2">
@@ -369,15 +420,14 @@ export default function Admin() {
                     type="text"
                     value={config.sizes}
                     onChange={(e) => setConfig({ ...config, sizes: e.target.value })}
-                    placeholder="مثال: 41, 42, 43 أو 41، 42، 43"
+                    placeholder="41, 42, 43 أو 41، 42، 43"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
                   />
-                  <p className="text-[10px] text-neutral-500">يقبل الفاصلة الإنجليزية (,) أو العربية (،)</p>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold">تفعيل اختيار الألوان (دوائر بصرية)</label>
+                    <label className="text-xs font-bold">تفعيل اختيار الألوان (دوائر ملونة)</label>
                     <input
                       type="checkbox"
                       checked={config.enableColors}
@@ -389,10 +439,9 @@ export default function Admin() {
                     type="text"
                     value={config.colors}
                     onChange={(e) => setConfig({ ...config, colors: e.target.value })}
-                    placeholder="مثال: أسود, كحلي, رمادي, أصفر"
+                    placeholder="أسود, كحلي, رمادي, أصفر"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
                   />
-                  <p className="text-[10px] text-neutral-500">السيستم يحول الاسم تلقائياً لدائرة لونية جذابة</p>
                 </div>
               </div>
 
@@ -453,11 +502,7 @@ export default function Admin() {
         {/* 2. تبويب ثيمات الألوان الستة المتطابقة */}
         {activeTab === "themes" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <div>
-              <h2 className="font-bold text-base text-amber-400">اختر ثيم المتجر الجاهز</h2>
-              <p className="text-xs text-neutral-400">يتغير مظهر المتجر فوراً عند الحفظ</p>
-            </div>
-
+            <h2 className="font-bold text-base text-amber-400">اختر ثيم المتجر الجاهز</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {THEMES_LIST.map((th) => {
                 const isSelected = config.selectedTheme === th.id;
@@ -488,7 +533,6 @@ export default function Admin() {
         {activeTab === "shipping" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">إدارة أسعار الشحن والمحافظات</h2>
-            
             <div className="flex items-center gap-3">
               <label className="text-xs text-neutral-400">الدولة المستهدفة:</label>
               <select
@@ -539,10 +583,10 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 4. تبويب التسويق والبكسل وواتساب */}
+        {/* 4. تبويب التسويق والبكسل (ميتا + تيك توك + جوجل المسترجع) */}
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وواتساب</h2>
+            <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والبكسل</h2>
             
             <div className="space-y-3">
               <div>
@@ -567,13 +611,14 @@ export default function Admin() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Meta Pixel ID</label>
+                  <label className="block text-xs text-neutral-400 mb-1">Meta Pixel ID (فيسبوك)</label>
                   <input
                     type="text"
                     value={config.metaPixelId}
                     onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })}
+                    placeholder="مثال: 1234567890"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
@@ -583,6 +628,17 @@ export default function Admin() {
                     type="text"
                     value={config.tiktokPixelId}
                     onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })}
+                    placeholder="مثال: C1234567890"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1 text-emerald-400">Google Ads Tag / Pixel ID (جوجل)</label>
+                  <input
+                    type="text"
+                    value={config.googlePixelId}
+                    onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })}
+                    placeholder="مثال: AW-123456789 أو G-XXXXX"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
@@ -591,7 +647,28 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 5. تبويب الطلبات المسجلة */}
+        {/* 5. تبويب حساب الإدارة والأمان */}
+        {activeTab === "settings" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">حساب المدير والبريد المعتمد للوحة التحكم</h2>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">البريد الإلكتروني المعتمد لإدارة المتجر</label>
+                <input
+                  type="email"
+                  value={config.adminEmail}
+                  onChange={(e) => setConfig({ ...config, adminEmail: e.target.value })}
+                  placeholder="admin@example.com"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+                <p className="text-[11px] text-neutral-500 mt-1">هذا هو البريد المعتمد للتحكم وتلقي تنبيهات المتجر الرسمية.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 6. تبويب الطلبات المسجلة */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex justify-between items-center">
