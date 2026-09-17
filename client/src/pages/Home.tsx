@@ -40,6 +40,7 @@ export interface ReviewItem {
 export interface StoreConfig {
   storeName: string;
   adminEmail: string;
+  adminPassword?: string;
   logoUrl: string;
   selectedTheme: ThemeType;
   showTopBar: boolean;
@@ -231,6 +232,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
   adminEmail: "admin@example.com",
+  adminPassword: "admin",
   logoUrl: "",
   selectedTheme: "sneakers",
   showTopBar: true,
@@ -339,7 +341,7 @@ export default function Home() {
     }
   }, []);
 
-  // تشغيل بكسل جوجل تلقائياً
+  // تشغيل بكسل جوجل
   useEffect(() => {
     if (config.googlePixelId) {
       const gScript = document.createElement("script");
@@ -439,7 +441,6 @@ export default function Home() {
     const existingOrders = JSON.parse(localStorage.getItem("store_orders") || "[]");
     localStorage.setItem("store_orders", JSON.stringify([orderData, ...existingOrders]));
 
-    // إرسال حدث التحويل إلى جوجل بيكسل
     if (typeof (window as any).gtag === "function" && config.googlePixelId) {
       (window as any).gtag("event", "purchase", {
         value: finalTotal,
@@ -463,7 +464,7 @@ export default function Home() {
 
   if (orderSuccess) {
     return (
-      <div style={{ backgroundColor: theme.bg, color: theme.textMain }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
+      <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border p-8 rounded-3xl max-w-sm w-full text-center space-y-5 shadow-2xl">
           <div style={{ backgroundColor: theme.accent, color: theme.accentText }} className="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-lg">
             ✓
@@ -489,7 +490,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ backgroundColor: theme.bg, color: theme.textMain }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
+    <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
       
       {/* شريط الإعلان العلوي */}
       {config.showTopBar && (
