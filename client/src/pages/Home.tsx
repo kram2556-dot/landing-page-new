@@ -313,11 +313,52 @@ const DEFAULT_CONFIG: StoreConfig = {
 };
 
 export default function Home() {
-  const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
+  // قراءة البيانات من الكاش المحلي فوراً لمنع أي وميض عند التحميل
+  const [config, setConfig] = useState<StoreConfig>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("store_config");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          let themeKey = parsed.selectedTheme;
+          if (themeKey === "royal") themeKey = "perfume";
+          if (themeKey === "obsidian") themeKey = "sneakers";
+          if (themeKey === "silk") themeKey = "fashion";
+          if (themeKey === "clinical") themeKey = "medical";
+          return {
+            ...DEFAULT_CONFIG,
+            ...parsed,
+            selectedTheme: themeKey || "sneakers",
+            countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
+          };
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    return DEFAULT_CONFIG;
+  });
+
   const [selectedQty, setSelectedQty] = useState<number>(1);
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedProvince, setSelectedProvince] = useState<string>("");
+  const [selectedSize, setSelectedSize] = useState<string>(() => {
+    if (config.enableSizes && config.sizes) {
+      const sList = config.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
+      return sList[0] || "41";
+    }
+    return "41";
+  });
+  const [selectedColor, setSelectedColor] = useState<string>(() => {
+    if (config.enableColors && config.colors) {
+      const cList = config.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
+      return cList[0] || "أسود";
+    }
+    return "أسود";
+  });
+  const [selectedProvince, setSelectedProvince] = useState<string>(() => {
+    const activeC = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
+    const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
+    return firstActiveProv ? firstActiveProv.name : "القاهرة";
+  });
 
   const [timeLeft, setTimeLeft] = useState({ minutes: 11, seconds: 40 });
   const [recentSale, setRecentSale] = useState<{ name: string; city: string } | null>(null);
@@ -330,33 +371,17 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
-  // جلب البيانات من Cloudflare KV مباشرة
+  // مزامنة البيانات من Cloudflare KV وتحديث الكاش المحلي
   useEffect(() => {
     fetch('/api/store')
       .then(res => res.json())
       .then(cloudData => {
         if (cloudData && Object.keys(cloudData).length > 0) {
+          localStorage.setItem("store_config", JSON.stringify(cloudData));
           applyStoreConfig(cloudData);
-        } else {
-          loadFromLocal();
         }
       })
-      .catch(() => loadFromLocal());
-
-    function loadFromLocal() {
-      const saved = localStorage.getItem("store_config");
-      if (saved) {
-        try {
-          applyStoreConfig(JSON.parse(saved));
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        setSelectedSize("41");
-        setSelectedColor("أسود");
-        setSelectedProvince("القاهرة");
-      }
-    }
+      .catch((err) => console.error("Cloud sync notice:", err));
 
     function applyStoreConfig(data: any) {
       let themeKey = data.selectedTheme;
@@ -375,16 +400,16 @@ export default function Home() {
 
       if (merged.enableSizes && merged.sizes) {
         const sList = merged.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
-        if (sList.length > 0) setSelectedSize(sList[0]);
+        if (sList.length > 0) setSelectedSize((prev) => sList.includes(prev) ? prev : sList[0]);
       }
       if (merged.enableColors && merged.colors) {
         const cList = merged.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
-        if (cList.length > 0) setSelectedColor(cList[0]);
+        if (cList.length > 0) setSelectedColor((prev) => cList.includes(prev) ? prev : cList[0]);
       }
 
       const activeC = merged.countries[merged.activeCountry] || DEFAULT_COUNTRIES.EG;
       const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
-      if (firstActiveProv) setSelectedProvince(firstActiveProv.name);
+      if (firstActiveProv) setSelectedProvince((prev) => prev || firstActiveProv.name);
     }
   }, []);
 
