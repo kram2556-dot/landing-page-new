@@ -212,8 +212,15 @@ export default function Admin() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passMsg, setPassMsg] = useState("");
 
+  // حقول إضافة محافظة جديدة
   const [newProvinceName, setNewProvinceName] = useState("");
   const [newProvinceCost, setNewProvinceCost] = useState(0);
+
+  // حقول إضافة دولة جديدة
+  const [newCountryName, setNewCountryName] = useState("");
+  const [newCountryCode, setNewCountryCode] = useState("");
+  const [newCountryCurrency, setNewCountryCurrency] = useState("");
+  const [newCountryPhoneCode, setNewCountryPhoneCode] = useState("");
 
   const fetchCloudOrders = (token?: string) => {
     const currentToken = token || sessionStorage.getItem("admin_token");
@@ -372,6 +379,43 @@ export default function Admin() {
     setNewProvinceCost(0);
   };
 
+  const handleAddCountry = () => {
+    if (!newCountryName.trim() || !newCountryCode.trim()) {
+      alert("يرجى كتابة اسم الدولة ورمزها (مثال: KW للكويت)");
+      return;
+    }
+    const cleanCode = newCountryCode.trim().toUpperCase();
+    if (config.countries[cleanCode]) {
+      alert("هذه الدولة مسجلة بالفعل!");
+      return;
+    }
+
+    const newCountryObj: CountryConfig = {
+      code: cleanCode,
+      name: newCountryName.trim(),
+      currency: newCountryCurrency.trim() || "عملة",
+      phoneCode: newCountryPhoneCode.trim() || "+",
+      provinces: [
+        { id: `prov_${Date.now()}`, name: "المدينة الرئيسية", enabled: true, shippingCost: 0 }
+      ]
+    };
+
+    setConfig({
+      ...config,
+      activeCountry: cleanCode,
+      countries: {
+        ...config.countries,
+        [cleanCode]: newCountryObj
+      }
+    });
+
+    setNewCountryName("");
+    setNewCountryCode("");
+    setNewCountryCurrency("");
+    setNewCountryPhoneCode("");
+    alert(`تمت إضافة دولة (${newCountryObj.name}) بنجاح وتعيينها كدولة نشطة!`);
+  };
+
   const exportToCSV = () => {
     if (orders.length === 0) return alert("لا توجد طلبات لتصديرها");
     const headers = ["معرف الطلب", "التاريخ", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "المقاس", "اللون", "الإجمالي", "الحالة"];
@@ -478,7 +522,7 @@ export default function Admin() {
           {[
             { id: "product", name: "المنتج والعروض" },
             { id: "themes", name: "ثيمات الألوان" },
-            { id: "shipping", name: "الشحن والمحافظات" },
+            { id: "shipping", name: "الدول والمحافظات" },
             { id: "marketing", name: "التسويق والبكسل" },
             { id: "settings", name: "حساب الإدارة والأمان" },
             { id: "orders", name: `الطلبات السحابية (${orders.length})` }
@@ -559,33 +603,93 @@ export default function Admin() {
         )}
 
         {activeTab === "shipping" && (
-          <div className="space-y-5 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+          <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            {/* 1. اختيار الدولة النشطة */}
             <div className="border-b border-neutral-800 pb-4 space-y-3">
-              <h2 className="font-bold text-base text-amber-400">الدولة وأسعار الشحن</h2>
+              <h2 className="font-bold text-base text-amber-400">الدولة والعملة النشطة</h2>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1 font-bold">الدولة النشطة للمتجر</label>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">اختر الدولة الحالية للمتجر</label>
                 <select
                   value={config.activeCountry}
                   onChange={(e) => setConfig({ ...config, activeCountry: e.target.value })}
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm font-bold text-amber-400 focus:outline-none"
                 >
-                  <option value="EG">🇪🇬 مصر (ج.م - +20)</option>
-                  <option value="SA">🇸🇦 السعودية (ر.س - +966)</option>
-                  <option value="AE">🇦🇪 الإمارات (د.إ - +971)</option>
-                  <option value="LY">🇱🇾 ليبيا (د.ل - +218)</option>
+                  {Object.keys(config.countries).map((code) => {
+                    const c = config.countries[code];
+                    return (
+                      <option key={code} value={code}>
+                        {c.name} ({c.currency} - {c.phoneCode})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
 
-            <div className="space-y-3">
+            {/* 2. إضافة دولة جديدة تماماً */}
+            <div className="bg-neutral-950/80 border border-amber-500/20 p-4 rounded-2xl space-y-3">
+              <h3 className="text-xs font-bold text-amber-400">🌍 إضافة دولة جديدة للمتجر</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-[10px] text-neutral-400 mb-1">اسم الدولة (مثال: الكويت)</label>
+                  <input
+                    type="text"
+                    value={newCountryName}
+                    onChange={(e) => setNewCountryName(e.target.value)}
+                    placeholder="الكويت"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-400 mb-1">رمز الدولة (مثال: KW)</label>
+                  <input
+                    type="text"
+                    value={newCountryCode}
+                    onChange={(e) => setNewCountryCode(e.target.value)}
+                    placeholder="KW"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-400 mb-1">العملة (مثال: د.ك)</label>
+                  <input
+                    type="text"
+                    value={newCountryCurrency}
+                    onChange={(e) => setNewCountryCurrency(e.target.value)}
+                    placeholder="د.ك"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-400 mb-1">كود الاتصال (مثال: +965)</label>
+                  <input
+                    type="text"
+                    value={newCountryPhoneCode}
+                    onChange={(e) => setNewCountryPhoneCode(e.target.value)}
+                    placeholder="+965"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCountry}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 rounded-xl text-xs transition"
+              >
+                + حفظ وإضافة الدولة
+              </button>
+            </div>
+
+            {/* 3. قائمة المحافظات للدولة المختارة */}
+            <div className="space-y-3 border-t border-neutral-800 pt-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-neutral-300">
-                  قائمة المحافظات والمدن ({activeCountryData.name})
+                <span className="text-xs font-bold text-neutral-200">
+                  محافظات ومدن دولة ({activeCountryData.name})
                 </span>
-                <span className="text-xs text-neutral-500">العملة: {activeCountryData.currency}</span>
+                <span className="text-xs text-amber-400 font-bold">العملة: {activeCountryData.currency}</span>
               </div>
 
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {activeCountryData.provinces.map((prov, idx) => (
                   <div key={prov.id} className="flex items-center justify-between bg-neutral-950 border border-neutral-800 p-3 rounded-xl text-xs">
                     <div className="flex items-center gap-2">
@@ -618,28 +722,31 @@ export default function Admin() {
                 ))}
               </div>
 
-              <div className="border-t border-neutral-800 pt-3 flex gap-2">
+              {/* 4. إضافة محافظة جديدة للدولة المختارة */}
+              <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
-                  placeholder="اسم المحافظة أو المدينة الجديدة"
+                  placeholder={`اسم المحافظة أو المدينة في (${activeCountryData.name})`}
                   value={newProvinceName}
                   onChange={(e) => setNewProvinceName(e.target.value)}
-                  className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                  className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-white"
                 />
-                <input
-                  type="number"
-                  placeholder="سعر الشحن"
-                  value={newProvinceCost || ""}
-                  onChange={(e) => setNewProvinceCost(Number(e.target.value))}
-                  className="w-24 bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-center"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddProvince}
-                  className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold transition"
-                >
-                  + إضافة
-                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="سعر الشحن"
+                    value={newProvinceCost || ""}
+                    onChange={(e) => setNewProvinceCost(Number(e.target.value))}
+                    className="w-28 bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-center font-bold text-amber-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddProvince}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex-shrink-0"
+                  >
+                    + إضافة المحافظة
+                  </button>
+                </div>
               </div>
             </div>
           </div>
