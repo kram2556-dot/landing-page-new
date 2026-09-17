@@ -1,9 +1,18 @@
+async function hashPassword(text: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function onRequestGet(context: any) {
   try {
     const raw = await context.env.STORE_KV.get("STORE_CONFIG");
     let data = raw ? JSON.parse(raw) : {};
 
+    // حذف أي أثر للباسورد قبل إرسال البيانات للمتصفح
     delete data.adminPassword;
+    delete data.adminPasswordHash;
 
     return new Response(JSON.stringify(data), {
       headers: { "Content-Type": "application/json" }
@@ -29,9 +38,13 @@ export async function onRequestPost(context: any) {
     const existingRaw = await context.env.STORE_KV.get("STORE_CONFIG");
     const existing = existingRaw ? JSON.parse(existingRaw) : {};
 
-    if (!newData.adminPassword) {
-      newData.adminPassword = existing.adminPassword || "admin";
+    // تشفير كلمة السر في KV إذا أدخل كلمة جديدة
+    if (newData.adminPassword && newData.adminPassword.trim() !== "") {
+      newData.adminPasswordHash = await hashPassword(newData.adminPassword);
+    } else {
+      newData.adminPasswordHash = existing.adminPasswordHash;
     }
+    delete newData.adminPassword;
 
     await context.env.STORE_KV.put("STORE_CONFIG", JSON.stringify(newData));
 
