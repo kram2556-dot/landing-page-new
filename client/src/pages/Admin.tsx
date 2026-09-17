@@ -193,7 +193,6 @@ export default function Admin() {
   const [savedMsg, setSavedMsg] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // حالة تسجيل الدخول
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -283,7 +282,6 @@ export default function Admin() {
     reader.readAsDataURL(file);
   };
 
-  // شاشة تسجيل الدخول المقفلة
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 font-sans" dir="rtl">
@@ -465,7 +463,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* التحكم الكامل في شريط كارت الصورة (المعاينة وبادج التوصيل) */}
+              {/* التحكم في شريط كارت الصورة (المعاينة وبادج التوصيل) */}
               <div className="border-t border-neutral-800 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -600,7 +598,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 2. تبويب ثيمات الألوان الستة المتطابقة */}
+        {/* 2. تبويب ثيمات الألوان الستة */}
         {activeTab === "themes" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">اختر ثيم المتجر الجاهز</h2>
@@ -684,7 +682,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 4. تبويب التسويق والبكسل (ميتا + تيك توك + جوجل) */}
+        {/* 4. تبويب التسويق والبكسل */}
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والبكسل</h2>
@@ -719,7 +717,7 @@ export default function Admin() {
                     type="text"
                     value={config.metaPixelId}
                     onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })}
-                    placeholder="مثال: 1234567890"
+                    placeholder="1234567890"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
@@ -729,7 +727,7 @@ export default function Admin() {
                     type="text"
                     value={config.tiktokPixelId}
                     onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })}
-                    placeholder="مثال: C1234567890"
+                    placeholder="C1234567890"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
@@ -739,7 +737,7 @@ export default function Admin() {
                     type="text"
                     value={config.googlePixelId}
                     onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })}
-                    placeholder="مثال: AW-123456789 أو G-XXXXX"
+                    placeholder="AW-123456789"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
@@ -830,4 +828,3 @@ export default function Admin() {
     </div>
   );
 }
-ذ
