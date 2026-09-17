@@ -78,7 +78,7 @@ export async function onRequestPost(context: any) {
     const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
     const rateKey = `rate:auth:${clientIP}`;
     
-    // منع التخمين Brute-Force: حظر مؤقت بعد 5 محاولات فاشلة
+    // منع التخمين: حظر مؤقت بعد 5 محاولات فاشلة
     const attemptsRaw = await context.env.STORE_KV.get(rateKey);
     const attempts = attemptsRaw ? parseInt(attemptsRaw) : 0;
     if (attempts >= 5) {
@@ -103,27 +103,27 @@ export async function onRequestPost(context: any) {
     if (storedHash) {
       isValid = await verifyPBKDF2(password, storedHash);
       
-      // إذا كان الهاش المخزن بالنظام القديم (SHA-256 بطول 64)
+      // التوافق مع التجزئة السابقة القديمة
       if (!isValid && storedHash.length === 64) {
         const msg = new TextEncoder().encode(password);
         const hashBuf = await crypto.subtle.digest("SHA-256", msg);
         const hex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
         if (hex === storedHash) {
           isValid = true;
-          needsRehash = true; // ترقية تلقائية للهاش
+          needsRehash = true;
         }
       }
     } else {
       if (password === storedPlain) {
         isValid = true;
-        needsRehash = true; // ترقية تلقائية للباسورد الافتراضية
+        needsRehash = true;
       }
     }
 
     if (email.toLowerCase().trim() === correctEmail && isValid) {
       await context.env.STORE_KV.delete(rateKey);
 
-      // ترقية الهاش القديم فوراً وحفظه في السحابة
+      // ترقية الهاش القديم فوراً وحفظه
       if (needsRehash) {
         storeData.adminPasswordHash = await hashPBKDF2(password);
         delete storeData.adminPassword;
@@ -145,6 +145,10 @@ export async function onRequestPost(context: any) {
       headers: { "Content-Type": "application/json" }
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    console.error("Auth Error:", err);
+    return new Response(JSON.stringify({ error: "حدث خطأ غير متوقع في الخادم" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
