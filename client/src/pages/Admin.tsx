@@ -225,11 +225,11 @@ export default function Admin() {
   const fetchCloudOrders = (token?: string) => {
     const currentToken = token || sessionStorage.getItem("admin_token");
     if (!currentToken) return;
-    fetch('/api/orders', {
-      headers: { 'x-admin-token': currentToken }
+    fetch("/api/orders", {
+      headers: { "x-admin-token": currentToken }
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) setOrders(data);
       })
       .catch((err) => console.error(err));
@@ -238,11 +238,11 @@ export default function Admin() {
   const loadStoreConfig = (token?: string) => {
     const currentToken = token || sessionStorage.getItem("admin_token");
     const headers: Record<string, string> = {};
-    if (currentToken) headers['x-admin-token'] = currentToken;
+    if (currentToken) headers["x-admin-token"] = currentToken;
 
-    fetch('/api/store', { headers })
-      .then(res => res.json())
-      .then(cloudData => {
+    fetch("/api/store", { headers })
+      .then((res) => res.json())
+      .then((cloudData) => {
         if (cloudData && Object.keys(cloudData).length > 0) {
           setConfig({
             ...DEFAULT_CONFIG,
@@ -269,9 +269,9 @@ export default function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
       });
       const data = await res.json();
@@ -306,11 +306,11 @@ export default function Admin() {
     }
 
     try {
-      const res = await fetch('/api/store', {
-        method: 'POST',
+      const res = await fetch("/api/store", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': token || ""
+          "Content-Type": "application/json",
+          "x-admin-token": token || ""
         },
         body: JSON.stringify(payload)
       });
@@ -334,15 +334,15 @@ export default function Admin() {
   const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
     const token = sessionStorage.getItem("admin_token");
     try {
-      await fetch('/api/orders', {
-        method: 'PATCH',
+      await fetch("/api/orders", {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': token || ""
+          "Content-Type": "application/json",
+          "x-admin-token": token || ""
         },
         body: JSON.stringify({ id, status: newStatus })
       });
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)));
     } catch (e) {
       alert("فشل تحديث حالة الطلب");
     }
@@ -352,9 +352,9 @@ export default function Admin() {
     const token = sessionStorage.getItem("admin_token");
     if (confirm("هل أنت متأكد من مسح جميع الطلبات نهائياً من السحابة؟")) {
       try {
-        await fetch('/api/orders', { 
-          method: 'DELETE',
-          headers: { 'x-admin-token': token || "" }
+        await fetch("/api/orders", {
+          method: "DELETE",
+          headers: { "x-admin-token": token || "" }
         });
         setOrders([]);
       } catch (e) {
@@ -429,7 +429,7 @@ export default function Admin() {
   const exportToCSV = () => {
     if (orders.length === 0) return alert("لا توجد طلبات لتصديرها");
     const headers = ["معرف الطلب", "التاريخ", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "المقاس", "اللون", "الإجمالي", "الحالة"];
-    const rows = orders.map(o => [
+    const rows = orders.map((o) => [
       o.id,
       new Date(o.createdAt || o.date).toLocaleString("ar-EG"),
       `"${o.fullName || ""}"`,
@@ -443,7 +443,7 @@ export default function Admin() {
       o.status || "جديد"
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -704,9 +704,15 @@ export default function Admin() {
                         type="checkbox" 
                         checked={prov.enabled} 
                         onChange={(e) => { 
-                          const u = { ...config }; 
-                          u.countries[config.activeCountry].provinces[idx].enabled = e.target.checked; 
-                          setConfig(u); 
+                          const currentProvs = config.countries[config.activeCountry]?.provinces || [];
+                          const updated = currentProvs.map((p, pIdx) => pIdx === idx ? { ...p, enabled: e.target.checked } : p);
+                          setConfig({
+                            ...config,
+                            countries: {
+                              ...config.countries,
+                              [config.activeCountry]: { ...config.countries[config.activeCountry], provinces: updated }
+                            }
+                          });
                         }} 
                         className="w-4 h-4 accent-amber-500" 
                       />
@@ -717,9 +723,15 @@ export default function Admin() {
                         type="number" 
                         value={prov.shippingCost} 
                         onChange={(e) => { 
-                          const u = { ...config }; 
-                          u.countries[config.activeCountry].provinces[idx].shippingCost = Number(e.target.value); 
-                          setConfig(u); 
+                          const currentProvs = config.countries[config.activeCountry]?.provinces || [];
+                          const updated = currentProvs.map((p, pIdx) => pIdx === idx ? { ...p, shippingCost: Number(e.target.value) } : p);
+                          setConfig({
+                            ...config,
+                            countries: {
+                              ...config.countries,
+                              [config.activeCountry]: { ...config.countries[config.activeCountry], provinces: updated }
+                            }
+                          });
                         }} 
                         className="w-20 bg-neutral-900 border border-neutral-800 rounded-lg p-1.5 text-center font-bold text-amber-400" 
                       />
