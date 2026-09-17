@@ -1,9 +1,39 @@
-// دالة تشفير SHA-256
-async function hashPassword(text: string): Promise<string> {
-  const msgUint8 = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+// خوارزمية تشفير PBKDF2 المعتمدة مع Salt و 100,000 دورة تجزئة
+async function verifyPBKDF2(password: string, combinedHash: string): Promise<boolean> {
+  try {
+    const parts = combinedHash.split(":");
+    if (parts.length !== 2) return false;
+    const [saltHex, keyHex] = parts;
+
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      256
+    );
+
+    const derivedHex = Array.from(new Uint8Array(derivedKey))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    return derivedHex === keyHex;
+  } catch {
+    return false;
+  }
 }
 
 function generateToken(): string {
@@ -17,7 +47,7 @@ export async function onRequestPost(context: any) {
     const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
     const rateKey = `rate:auth:${clientIP}`;
     
-    // فحص محاولات التخمين (حظر مؤقت بعد 5 محاولات فاشلة)
+    // منع التخمين Brute-Force: حظر مؤقت بعد 5 محاولات فاشلة لمدة 15 دقيقة
     const attemptsRaw = await context.env.STORE_KV.get(rateKey);
     const attempts = attemptsRaw ? parseInt(attemptsRaw) : 0;
     if (attempts >= 5) {
@@ -33,17 +63,26 @@ export async function onRequestPost(context: any) {
     const storeData = storeRaw ? JSON.parse(storeRaw) : {};
 
     const correctEmail = (storeData.adminEmail || "admin@example.com").toLowerCase().trim();
-    const inputHashed = await hashPassword(password);
-    
-    const storedPass = storeData.adminPassword || "admin";
-    const storedHashed = storeData.adminPasswordHash;
+    const storedHash = storeData.adminPasswordHash;
+    const storedPlain = storeData.adminPassword || "admin";
 
-    const isPassValid = storedHashed 
-      ? (inputHashed === storedHashed)
-      : (password === storedPass || inputHashed === storedPass);
+    let isValid = false;
 
-    if (email.toLowerCase().trim() === correctEmail && isPassValid) {
-      // تصفير عداد المحاولات الفاشلة عند الدخول السليم
+    if (storedHash) {
+      // التحقق عبر PBKDF2 المتقدمة
+      isValid = await verifyPBKDF2(password, storedHash);
+      // دعم خلفي بسيط في حال كانت التجزئة السابقة SHA-256 عادية
+      if (!isValid && storedHash.length === 64) {
+        const msg = new TextEncoder().encode(password);
+        const hashBuf = await crypto.subtle.digest("SHA-256", msg);
+        const hex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+        isValid = (hex === storedHash);
+      }
+    } else {
+      isValid = (password === storedPlain);
+    }
+
+    if (email.toLowerCase().trim() === correctEmail && isValid) {
       await context.env.STORE_KV.delete(rateKey);
       
       const sessionToken = generateToken();
@@ -54,7 +93,6 @@ export async function onRequestPost(context: any) {
       });
     }
 
-    // تسجيل محاولة فاشلة مع مهلة 15 دقيقة (900 ثانية)
     await context.env.STORE_KV.put(rateKey, (attempts + 1).toString(), { expirationTtl: 900 });
 
     return new Response(JSON.stringify({ error: "بيانات الدخول غير صحيحة" }), {
