@@ -39,6 +39,7 @@ export interface ReviewItem {
 
 export interface StoreConfig {
   storeName: string;
+  adminEmail: string;
   logoUrl: string;
   selectedTheme: ThemeType;
   showTopBar: boolean;
@@ -47,6 +48,9 @@ export interface StoreConfig {
   timerMinutes: number;
   showStockBar: boolean;
   stockLeft: number;
+  showBadge: boolean;
+  badgeText: string;
+  guaranteeBadgeText: string;
   showRecentSales: boolean;
   showStickyButton: boolean;
   showSupportWhatsapp: boolean;
@@ -73,6 +77,7 @@ export interface StoreConfig {
   whatsappNumber: string;
   metaPixelId: string;
   tiktokPixelId: string;
+  googlePixelId: string;
 }
 
 const THEME_STYLES: Record<ThemeType, {
@@ -225,6 +230,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
+  adminEmail: "admin@example.com",
   logoUrl: "",
   selectedTheme: "sneakers",
   showTopBar: true,
@@ -233,6 +239,9 @@ const DEFAULT_CONFIG: StoreConfig = {
   timerMinutes: 15,
   showStockBar: true,
   stockLeft: 7,
+  showBadge: true,
+  badgeText: "معاينة مجانية للمنتج قبل الدفع",
+  guaranteeBadgeText: "يشمل التوصيل والتغليف",
   showRecentSales: true,
   showStickyButton: true,
   showSupportWhatsapp: true,
@@ -267,7 +276,8 @@ const DEFAULT_CONFIG: StoreConfig = {
   ],
   whatsappNumber: "+201000000000",
   metaPixelId: "",
-  tiktokPixelId: ""
+  tiktokPixelId: "",
+  googlePixelId: ""
 };
 
 export default function Home() {
@@ -328,6 +338,25 @@ export default function Home() {
       setSelectedProvince("القاهرة");
     }
   }, []);
+
+  // تشغيل بكسل جوجل تلقائياً
+  useEffect(() => {
+    if (config.googlePixelId) {
+      const gScript = document.createElement("script");
+      gScript.async = true;
+      gScript.src = `https://www.googletagmanager.com/gtag/js?id=${config.googlePixelId}`;
+      document.head.appendChild(gScript);
+
+      const inlineScript = document.createElement("script");
+      inlineScript.innerHTML = `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${config.googlePixelId}');
+      `;
+      document.head.appendChild(inlineScript);
+    }
+  }, [config.googlePixelId]);
 
   useEffect(() => {
     if (!config.showTimer) return;
@@ -409,6 +438,14 @@ export default function Home() {
 
     const existingOrders = JSON.parse(localStorage.getItem("store_orders") || "[]");
     localStorage.setItem("store_orders", JSON.stringify([orderData, ...existingOrders]));
+
+    // إرسال حدث التحويل إلى جوجل بيكسل
+    if (typeof (window as any).gtag === "function" && config.googlePixelId) {
+      (window as any).gtag("event", "purchase", {
+        value: finalTotal,
+        currency: activeCountry.currency
+      });
+    }
 
     setIsSubmitting(false);
     setOrderSuccess(true);
@@ -524,16 +561,20 @@ export default function Home() {
           </div>
         </div>
 
-        {/* كارت عرض الصورة الأساسية */}
+        {/* كارت عرض الصورة الأساسية مع التحكم في المعاينة والبادج */}
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border rounded-3xl overflow-hidden shadow-2xl">
           <img src={config.productImage} alt={config.productTitle} className="w-full h-80 sm:h-96 object-cover" />
           
-          <div style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "#f1f5f9" : "rgba(0,0,0,0.55)" }} className="p-4 border-t flex items-center justify-between text-xs">
-            <span style={{ color: theme.textMain }} className="font-bold">معاينة مجانية للمنتج قبل الدفع</span>
-            <span style={{ color: theme.accent, borderColor: theme.border }} className="border px-3 py-1 rounded-full text-[11px] font-bold">
-              يشمل التوصيل والتغليف
-            </span>
-          </div>
+          {config.showBadge && (
+            <div style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "#f1f5f9" : "rgba(0,0,0,0.55)" }} className="p-4 border-t flex items-center justify-between text-xs">
+              <span style={{ color: theme.textMain }} className="font-bold">{config.badgeText || "معاينة مجانية للمنتج قبل الدفع"}</span>
+              {config.guaranteeBadgeText && (
+                <span style={{ color: theme.accent, borderColor: theme.border }} className="border px-3 py-1 rounded-full text-[11px] font-bold">
+                  {config.guaranteeBadgeText}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* شريط ندرة القطع المتبقية */}
