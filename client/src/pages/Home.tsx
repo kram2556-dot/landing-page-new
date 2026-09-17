@@ -313,7 +313,6 @@ const DEFAULT_CONFIG: StoreConfig = {
 };
 
 export default function Home() {
-  // قراءة البيانات من الكاش المحلي فوراً لمنع أي وميض عند التحميل
   const [config, setConfig] = useState<StoreConfig>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("store_config");
@@ -371,7 +370,6 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
-  // مزامنة البيانات من Cloudflare KV وتحديث الكاش المحلي
   useEffect(() => {
     fetch('/api/store')
       .then(res => res.json())
@@ -413,7 +411,6 @@ export default function Home() {
     }
   }, []);
 
-  // تشغيل بكسل جوجل
   useEffect(() => {
     if (config.googlePixelId) {
       const gScript = document.createElement("script");
@@ -483,7 +480,7 @@ export default function Home() {
   const sizeList = config.sizes ? config.sizes.split(/[,،]+/).map((s) => s.trim()).filter(Boolean) : [];
   const colorList = config.colors ? config.colors.split(/[,،]+/).map((c) => c.trim()).filter(Boolean) : [];
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !selectedProvince || !phone || !address) {
       alert("يرجى ملء جميع الحقول الإلزامية");
@@ -510,6 +507,18 @@ export default function Home() {
       date: new Date().toISOString()
     };
 
+    // 1. إرسال الطلب سحابياً وتخزينه في KV فوراً
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+    } catch (err) {
+      console.error("Failed to sync order to cloud KV", err);
+    }
+
+    // 2. حفظ نسخة احتياطية في متصفح العميل
     const existingOrders = JSON.parse(localStorage.getItem("store_orders") || "[]");
     localStorage.setItem("store_orders", JSON.stringify([orderData, ...existingOrders]));
 
@@ -523,13 +532,17 @@ export default function Home() {
     setIsSubmitting(false);
     setOrderSuccess(true);
 
+    // 3. التوجيه للواتساب بالرقم الدولي الصحيح
     if (config.whatsappNumber) {
       let spec = "";
       if (config.enableSizes && selectedSize) spec += `%0A- المقاس: ${selectedSize}`;
       if (config.enableColors && selectedColor) spec += `%0A- اللون: ${selectedColor}`;
 
       const msg = `طلب جديد:%0A- الاسم: ${fullName}%0A- الدولة: ${activeCountry.name}%0A- المحافظة: ${selectedProvince}%0A- العنوان: ${address}${spec}%0A- الكمية: ${selectedQty}%0A- الإجمالي: ${finalTotal} ${activeCountry.currency}%0A- الهاتف: ${phone}${altPhone ? ` (بديل: ${altPhone})` : ""}${notes ? `%0A- ملاحظات: ${notes}` : ""}`;
-      const cleanPhone = config.whatsappNumber.replace(/[^0-9]/g, "");
+      
+      let cleanPhone = config.whatsappNumber.replace(/[^0-9]/g, "");
+      if (cleanPhone.startsWith("01")) cleanPhone = "2" + cleanPhone;
+
       window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
     }
   };
@@ -564,7 +577,6 @@ export default function Home() {
   return (
     <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
       
-      {/* شريط الإعلان العلوي */}
       {config.showTopBar && (
         <div style={{ backgroundColor: theme.accent, color: theme.accentText }} className="py-2.5 px-4 text-xs font-bold text-center sticky top-0 z-50 shadow-md flex items-center justify-center gap-3">
           <button onClick={scrollToCheckout} className="flex items-center gap-1 font-black underline underline-offset-4 hover:opacity-80 transition text-[11px]">
@@ -579,7 +591,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* الهيدر */}
       <header style={{ borderColor: theme.border, backgroundColor: theme.isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.3)" }} className="border-b backdrop-blur-md sticky top-8 z-40">
         <div className="max-w-3xl mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -606,7 +617,6 @@ export default function Home() {
 
       <main className="max-w-2xl mx-auto px-4 pt-4 space-y-6">
         
-        {/* عنوان وسعر المنتج */}
         <div className="text-center space-y-1.5 pt-0">
           <h1 style={{ color: theme.textMain }} className="text-xl sm:text-2xl font-black leading-snug px-2 m-0">
             {config.productTitle}
@@ -634,7 +644,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* كارت عرض الصورة الأساسية مع التحكم في المعاينة والبادج */}
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border rounded-3xl overflow-hidden shadow-2xl">
           <img src={config.productImage} alt={config.productTitle} className="w-full h-80 sm:h-96 object-cover" />
           
@@ -650,7 +659,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* شريط ندرة القطع المتبقية */}
         {config.showStockBar && (
           <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm">
             <div className="flex items-center gap-2 text-red-500 font-bold">
@@ -663,7 +671,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* دوائر الألوان البصرية والمقاسات */}
         {(config.enableSizes || config.enableColors) && (
           <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-6 shadow-sm space-y-5">
             
@@ -737,7 +744,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* مميزات المنتج */}
         <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
           <h3 style={{ color: theme.accent }} className="font-extrabold text-sm">مميزات وتفاصيل الجودة:</h3>
           <ul className="space-y-2.5 text-xs sm:text-sm">
@@ -750,7 +756,6 @@ export default function Home() {
           </ul>
         </div>
 
-        {/* معرض الصور التوضيحي مع الشرح */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <h3 style={{ color: theme.textMain }} className="font-black text-base text-center">تفاصيل المنتج عن قرب:</h3>
@@ -769,7 +774,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* باقات التوفير */}
         {config.showBundles && (
           <div className="space-y-3">
             <h3 style={{ color: theme.textMain }} className="text-base font-extrabold text-center">عروض وباقات التوفير</h3>
@@ -803,7 +807,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* نموذج تأكيد الطلب */}
         <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
           <div className="text-center space-y-1 border-b pb-4" style={{ borderColor: theme.border }}>
             <h2 style={{ color: theme.textMain }} className="text-xl font-black">أدخل بياناتك لاستلام ومعاينة الطلب</h2>
@@ -942,7 +945,6 @@ export default function Home() {
           </form>
         </section>
 
-        {/* بطاقة الضمان */}
         {config.showGuarantee && (
           <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-2xl p-5 flex items-center gap-4 shadow-sm">
             <span style={{ color: theme.accent }} className="text-3xl">🛡️</span>
@@ -953,7 +955,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* قسم تقييمات المشترين */}
         {config.showReviews && config.reviews && config.reviews.length > 0 && (
           <div className="space-y-3">
             <h3 style={{ color: theme.textMain }} className="font-black text-sm">تجارب وآراء المشترين:</h3>
@@ -972,7 +973,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* إشعار الشراء اللحظي المنبثق */}
       {recentSale && (
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accent }} className="fixed bottom-20 left-4 z-50 border p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs backdrop-blur-xl">
           <div style={{ backgroundColor: `${theme.accent}20`, color: theme.accent }} className="w-8 h-8 rounded-full flex items-center justify-center font-black">
@@ -985,7 +985,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* زر واتساب العائم */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
           href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، أود الاستفسار عن تفاصيل المنتج")}`}
@@ -998,7 +997,6 @@ export default function Home() {
         </a>
       )}
 
-      {/* زر الشراء العائم بأسفل شاشة الموبايل */}
       {config.showStickyButton && (
         <div style={{ backgroundColor: theme.isLight ? "rgba(255,255,255,0.95)" : "rgba(10, 14, 20, 0.95)", borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3.5 backdrop-blur-xl border-t sm:hidden z-40">
           <button
