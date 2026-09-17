@@ -5,12 +5,13 @@ async function verifyAuth(context: any): Promise<boolean> {
   return session === "active";
 }
 
+// 1. تسجيل طلب جديد مع حماية Anti-Spam و Anti-Race Condition
 export async function onRequestPost(context: any) {
   try {
     const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
     const floodKey = `flood:order:${clientIP}`;
     
-    // منع السبام: حد أقصى طلبين كل 60 ثانية من نفس الـ IP
+    // حد أقصى طلبين كل دقيقة لكل IP
     const recent = await context.env.STORE_KV.get(floodKey);
     const count = recent ? parseInt(recent) : 0;
     if (count >= 2) {
@@ -44,6 +45,7 @@ export async function onRequestPost(context: any) {
   }
 }
 
+// 2. جلب كافة الطلبات مع دعم Pagination التلقائي مهما تجاوزت 1,000 طلب
 export async function onRequestGet(context: any) {
   if (!(await verifyAuth(context))) {
     return new Response(JSON.stringify({ error: "غير مصرح لك بالوصول" }), {
@@ -53,9 +55,24 @@ export async function onRequestGet(context: any) {
   }
 
   try {
-    const list = await context.env.STORE_KV.list({ prefix: "order:" });
+    let allKeys: any[] = [];
+    let cursor: string | undefined = undefined;
+
+    // حلقة تكرارية لسحب كل المفاتيح بدون التوقف عند حد الـ 1000
+    do {
+      const listRes: any = await context.env.STORE_KV.list({
+        prefix: "order:",
+        cursor: cursor
+      });
+      if (listRes.keys && listRes.keys.length > 0) {
+        allKeys.push(...listRes.keys);
+      }
+      cursor = listRes.list_complete ? undefined : listRes.cursor;
+    } while (cursor);
+
+    // قراءة محتوى الطلبات
     const orders = await Promise.all(
-      (list.keys || []).map(async (k: any) => {
+      allKeys.map(async (k: any) => {
         const raw = await context.env.STORE_KV.get(k.name);
         return raw ? JSON.parse(raw) : null;
       })
@@ -73,6 +90,7 @@ export async function onRequestGet(context: any) {
   }
 }
 
+// 3. تحديث حالة الطلب
 export async function onRequestPatch(context: any) {
   if (!(await verifyAuth(context))) {
     return new Response(JSON.stringify({ error: "غير مصرح" }), { status: 401 });
@@ -80,35 +98,54 @@ export async function onRequestPatch(context: any) {
 
   try {
     const { id, status } = await context.request.json();
-    const list = await context.env.STORE_KV.list({ prefix: "order:" });
-    for (const key of list.keys) {
-      const raw = await context.env.STORE_KV.get(key.name);
-      if (raw) {
-        const item = JSON.parse(raw);
-        if (item.id === id) {
-          item.status = status;
-          await context.env.STORE_KV.put(key.name, JSON.stringify(item));
-          return new Response(JSON.stringify({ success: true }));
+    let cursor: string | undefined = undefined;
+
+    do {
+      const listRes: any = await context.env.STORE_KV.list({
+        prefix: "order:",
+        cursor: cursor
+      });
+      for (const key of (listRes.keys || [])) {
+        const raw = await context.env.STORE_KV.get(key.name);
+        if (raw) {
+          const item = JSON.parse(raw);
+          if (item.id === id) {
+            item.status = status;
+            await context.env.STORE_KV.put(key.name, JSON.stringify(item));
+            return new Response(JSON.stringify({ success: true }));
+          }
         }
       }
-    }
+      cursor = listRes.list_complete ? undefined : listRes.cursor;
+    } while (cursor);
+
     return new Response(JSON.stringify({ error: "الطلب غير موجود" }), { status: 404 });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
 
+// 4. مسح الطلبات بالكامل مع دعم مسح أكثر من 1,000 طلب
 export async function onRequestDelete(context: any) {
   if (!(await verifyAuth(context))) {
     return new Response(JSON.stringify({ error: "غير مصرح" }), { status: 401 });
   }
 
   try {
-    const list = await context.env.STORE_KV.list({ prefix: "order:" });
-    await Promise.all(list.keys.map((k: any) => context.env.STORE_KV.delete(k.name)));
+    let cursor: string | undefined = undefined;
+    do {
+      const listRes: any = await context.env.STORE_KV.list({
+        prefix: "order:",
+        cursor: cursor
+      });
+      if (listRes.keys && listRes.keys.length > 0) {
+        await Promise.all(listRes.keys.map((k: any) => context.env.STORE_KV.delete(k.name)));
+      }
+      cursor = listRes.list_complete ? undefined : listRes.cursor;
+    } while (cursor);
+
     return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
-
