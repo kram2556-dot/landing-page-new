@@ -1,4 +1,3 @@
-// دالة تشفير PBKDF2 المعتمدة مع Salt و 210,000 دورة تجزئة
 async function hashPBKDF2(password: string): Promise<string> {
   const salt = new Uint8Array(16);
   crypto.getRandomValues(salt);
@@ -29,7 +28,6 @@ async function hashPBKDF2(password: string): Promise<string> {
   return `${saltHex}:${keyHex}`;
 }
 
-// دالة التحقق من PBKDF2
 async function verifyPBKDF2(password: string, combinedHash: string): Promise<boolean> {
   try {
     const parts = combinedHash.split(":");
@@ -78,7 +76,6 @@ export async function onRequestPost(context: any) {
     const clientIP = context.request.headers.get("cf-connecting-ip") || "unknown";
     const rateKey = `rate:auth:${clientIP}`;
     
-    // منع التخمين: حظر مؤقت بعد 5 محاولات فاشلة
     const attemptsRaw = await context.env.STORE_KV.get(rateKey);
     const attempts = attemptsRaw ? parseInt(attemptsRaw) : 0;
     if (attempts >= 5) {
@@ -103,7 +100,6 @@ export async function onRequestPost(context: any) {
     if (storedHash) {
       isValid = await verifyPBKDF2(password, storedHash);
       
-      // التوافق مع التجزئة السابقة القديمة
       if (!isValid && storedHash.length === 64) {
         const msg = new TextEncoder().encode(password);
         const hashBuf = await crypto.subtle.digest("SHA-256", msg);
@@ -123,7 +119,6 @@ export async function onRequestPost(context: any) {
     if (email.toLowerCase().trim() === correctEmail && isValid) {
       await context.env.STORE_KV.delete(rateKey);
 
-      // ترقية الهاش القديم فوراً وحفظه
       if (needsRehash) {
         storeData.adminPasswordHash = await hashPBKDF2(password);
         delete storeData.adminPassword;
