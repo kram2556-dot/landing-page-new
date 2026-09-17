@@ -198,7 +198,7 @@ export default function Admin() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  // جلب البيانات من Cloudflare KV مع دعم الـ localStorage
+  // جلب البيانات السحابية والإعدادات
   useEffect(() => {
     fetch('/api/store')
       .then(res => res.json())
@@ -234,14 +234,25 @@ export default function Admin() {
       }
     }
 
-    const ords = localStorage.getItem("store_orders");
-    if (ords) {
-      try {
-        setOrders(JSON.parse(ords));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    // جلب الطلبات السحابية من مسار /api/orders
+    fetch('/api/orders')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setOrders(data);
+          localStorage.setItem("store_orders", JSON.stringify(data));
+        }
+      })
+      .catch(() => {
+        const ords = localStorage.getItem("store_orders");
+        if (ords) {
+          try {
+            setOrders(JSON.parse(ords));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      });
 
     if (sessionStorage.getItem("admin_logged_in") === "true") {
       setIsAuthenticated(true);
@@ -281,6 +292,18 @@ export default function Admin() {
     }
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
+  };
+
+  const handleClearOrders = async () => {
+    if (confirm("هل أنت متأكد من مسح جميع الطلبات نهائياً من السحابة؟")) {
+      try {
+        await fetch('/api/orders', { method: 'DELETE' });
+      } catch (e) {
+        console.error(e);
+      }
+      localStorage.removeItem("store_orders");
+      setOrders([]);
+    }
   };
 
   const compressAndSetImage = (file: File, callback: (base64: string) => void) => {
@@ -409,7 +432,7 @@ export default function Admin() {
             { id: "shipping", name: "الشحن والمحافظات" },
             { id: "marketing", name: "التسويق والبكسل (ميتا/تيك توك/جوجل)" },
             { id: "settings", name: "حساب الإدارة والأمان (الباسورد)" },
-            { id: "orders", name: `الطلبات (${orders.length})` }
+            { id: "orders", name: `الطلبات السحابية (${orders.length})` }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -494,7 +517,6 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* التحكم في شريط كارت الصورة (المعاينة وبادج التوصيل) */}
               <div className="border-t border-neutral-800 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -534,7 +556,6 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* المقاسات والألوان */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -575,7 +596,6 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* معرض الصور التوضيحي مع الشرح */}
               <div className="border-t border-neutral-800 pt-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-xs font-bold text-neutral-300">معرض الصور التوضيحي مع الشرح</h3>
@@ -716,27 +736,31 @@ export default function Admin() {
         {/* 4. تبويب التسويق والبكسل */}
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والبكسل</h2>
+            <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والواتساب</h2>
             
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">رقم واتساب لاستقبال الطلبات</label>
+                <label className="block text-xs text-neutral-400 mb-1">
+                  رقم واتساب لاستقبال تفاصيل الطلبات (صيغة دولية مثل: 201012345678)
+                </label>
                 <input
                   type="text"
                   value={config.whatsappNumber}
                   onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })}
-                  placeholder="+201000000000"
+                  placeholder="201000000000"
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">رقم واتساب لأيقونة الدعم العائمة</label>
+                <label className="block text-xs text-neutral-400 mb-1">
+                  رقم واتساب لأيقونة الدعم العائمة (صيغة دولية مثل: 201012345678)
+                </label>
                 <input
                   type="text"
                   value={config.supportWhatsappNumber}
                   onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })}
-                  placeholder="+201000000000"
+                  placeholder="201000000000"
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                 />
               </div>
@@ -777,7 +801,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 5. تبويب حساب الإدارة والأمان (مع خانة كلمة السر) */}
+        {/* 5. تبويب حساب الإدارة والأمان */}
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">حساب المدير والأمان للدخول للوحة</h2>
@@ -809,42 +833,55 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 6. تبويب الطلبات المسجلة */}
+        {/* 6. تبويب الطلبات السحابية */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex justify-between items-center">
-              <h2 className="font-bold text-base text-amber-400">سجل الطلبات ({orders.length})</h2>
+              <div>
+                <h2 className="font-bold text-base text-amber-400">سجل الطلبات السحابية ({orders.length})</h2>
+                <span className="text-[10px] text-neutral-500">يتم سحب الطلبات مباشرة من Cloudflare KV</span>
+              </div>
               {orders.length > 0 && (
                 <button
-                  onClick={() => {
-                    if (confirm("هل أنت متأكد من مسح جميع الطلبات؟")) {
-                      localStorage.removeItem("store_orders");
-                      setOrders([]);
-                    }
-                  }}
-                  className="text-red-400 hover:text-red-300 text-xs"
+                  onClick={handleClearOrders}
+                  className="text-red-400 hover:text-red-300 text-xs bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg transition"
                 >
-                  مسح السجل
+                  مسح السجل سحابياً
                 </button>
               )}
             </div>
 
             {orders.length === 0 ? (
-              <p className="text-xs text-neutral-500 py-8 text-center">لا توجد طلبات مسجلة بعد</p>
+              <p className="text-xs text-neutral-500 py-8 text-center">لا توجد طلبات مسجلة بعد على السحابة</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {orders.map((ord, i) => (
-                  <div key={i} className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-1.5 text-xs">
+                  <div key={ord.id || i} className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-1.5 text-xs">
                     <div className="flex justify-between font-bold text-amber-400">
                       <span>{ord.fullName}</span>
                       <span>{ord.total} {ord.currency}</span>
                     </div>
-                    <p className="text-neutral-300">الهاتف: {ord.phone} {ord.altPhone ? `(بديل: ${ord.altPhone})` : ""}</p>
+                    <div className="flex items-center justify-between text-neutral-300">
+                      <span>الهاتف: {ord.phone} {ord.altPhone ? `(بديل: ${ord.altPhone})` : ""}</span>
+                      <a 
+                        href={`https://wa.me/${ord.phone.replace(/[^0-9]/g, "")}`}
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-emerald-400 hover:underline text-[11px]"
+                      >
+                        مراسلة المشتري واتساب ↗
+                      </a>
+                    </div>
                     <p className="text-neutral-400">العنوان: {ord.governorate} — {ord.address}</p>
                     {(ord.selectedSize || ord.selectedColor) && (
                       <p className="text-neutral-400">
                         {ord.selectedSize ? `المقاس: ${ord.selectedSize} ` : ""}
                         {ord.selectedColor ? `| اللون: ${ord.selectedColor}` : ""}
+                      </p>
+                    )}
+                    {ord.date && (
+                      <p className="text-[10px] text-neutral-500">
+                        تاريخ الطلب: {new Date(ord.date).toLocaleString("ar-EG")}
                       </p>
                     )}
                     {ord.notes && <p className="text-neutral-500 italic">ملاحظات: {ord.notes}</p>}
