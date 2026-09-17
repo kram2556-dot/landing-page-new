@@ -226,6 +226,36 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
       { id: "giza", name: "الجيزة", enabled: true, shippingCost: 0 },
       { id: "alex", name: "الإسكندرية", enabled: true, shippingCost: 0 }
     ]
+  },
+  SA: {
+    code: "SA",
+    name: "السعودية",
+    currency: "ر.س",
+    phoneCode: "+966",
+    provinces: [
+      { id: "riyadh", name: "الرياض", enabled: true, shippingCost: 0 },
+      { id: "jeddah", name: "جدة", enabled: true, shippingCost: 0 }
+    ]
+  },
+  AE: {
+    code: "AE",
+    name: "الإمارات",
+    currency: "د.إ",
+    phoneCode: "+971",
+    provinces: [
+      { id: "dubai", name: "دبي", enabled: true, shippingCost: 0 },
+      { id: "abudhabi", name: "أبوظبي", enabled: true, shippingCost: 0 }
+    ]
+  },
+  LY: {
+    code: "LY",
+    name: "ليبيا",
+    currency: "د.ل",
+    phoneCode: "+218",
+    provinces: [
+      { id: "tripoli", name: "طرابلس", enabled: true, shippingCost: 0 },
+      { id: "benghazi", name: "بنغازي", enabled: true, shippingCost: 0 }
+    ]
   }
 };
 
@@ -300,44 +330,61 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
+  // جلب البيانات من Cloudflare KV مباشرة
   useEffect(() => {
-    const saved = localStorage.getItem("store_config");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        let themeKey = parsed.selectedTheme;
-        if (themeKey === "royal") themeKey = "perfume";
-        if (themeKey === "obsidian") themeKey = "sneakers";
-        if (themeKey === "silk") themeKey = "fashion";
-        if (themeKey === "clinical") themeKey = "medical";
-
-        const merged: StoreConfig = {
-          ...DEFAULT_CONFIG,
-          ...parsed,
-          selectedTheme: themeKey || "sneakers",
-          countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
-        };
-        setConfig(merged);
-
-        if (merged.enableSizes && merged.sizes) {
-          const sList = merged.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
-          if (sList.length > 0) setSelectedSize(sList[0]);
+    fetch('/api/store')
+      .then(res => res.json())
+      .then(cloudData => {
+        if (cloudData && Object.keys(cloudData).length > 0) {
+          applyStoreConfig(cloudData);
+        } else {
+          loadFromLocal();
         }
-        if (merged.enableColors && merged.colors) {
-          const cList = merged.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
-          if (cList.length > 0) setSelectedColor(cList[0]);
-        }
+      })
+      .catch(() => loadFromLocal());
 
-        const activeC = merged.countries[merged.activeCountry] || DEFAULT_COUNTRIES.EG;
-        const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
-        if (firstActiveProv) setSelectedProvince(firstActiveProv.name);
-      } catch (e) {
-        console.error(e);
+    function loadFromLocal() {
+      const saved = localStorage.getItem("store_config");
+      if (saved) {
+        try {
+          applyStoreConfig(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setSelectedSize("41");
+        setSelectedColor("أسود");
+        setSelectedProvince("القاهرة");
       }
-    } else {
-      setSelectedSize("41");
-      setSelectedColor("أسود");
-      setSelectedProvince("القاهرة");
+    }
+
+    function applyStoreConfig(data: any) {
+      let themeKey = data.selectedTheme;
+      if (themeKey === "royal") themeKey = "perfume";
+      if (themeKey === "obsidian") themeKey = "sneakers";
+      if (themeKey === "silk") themeKey = "fashion";
+      if (themeKey === "clinical") themeKey = "medical";
+
+      const merged: StoreConfig = {
+        ...DEFAULT_CONFIG,
+        ...data,
+        selectedTheme: themeKey || "sneakers",
+        countries: { ...DEFAULT_COUNTRIES, ...(data.countries || {}) }
+      };
+      setConfig(merged);
+
+      if (merged.enableSizes && merged.sizes) {
+        const sList = merged.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
+        if (sList.length > 0) setSelectedSize(sList[0]);
+      }
+      if (merged.enableColors && merged.colors) {
+        const cList = merged.colors.split(/[,،]+/).map((c: string) => c.trim()).filter(Boolean);
+        if (cList.length > 0) setSelectedColor(cList[0]);
+      }
+
+      const activeC = merged.countries[merged.activeCountry] || DEFAULT_COUNTRIES.EG;
+      const firstActiveProv = activeC.provinces?.find((p) => p.enabled);
+      if (firstActiveProv) setSelectedProvince(firstActiveProv.name);
     }
   }, []);
 
@@ -534,7 +581,7 @@ export default function Home() {
 
       <main className="max-w-2xl mx-auto px-4 pt-4 space-y-6">
         
-        {/* عنوان وسعر المنتج - مرفوع لأعلى بدون أي تداخل وبمسافات مريحة */}
+        {/* عنوان وسعر المنتج */}
         <div className="text-center space-y-1.5 pt-0">
           <h1 style={{ color: theme.textMain }} className="text-xl sm:text-2xl font-black leading-snug px-2 m-0">
             {config.productTitle}
@@ -731,7 +778,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* نموذج تأكيد الطلب مع تباين نظيف للخانات */}
+        {/* نموذج تأكيد الطلب */}
         <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
           <div className="text-center space-y-1 border-b pb-4" style={{ borderColor: theme.border }}>
             <h2 style={{ color: theme.textMain }} className="text-xl font-black">أدخل بياناتك لاستلام ومعاينة الطلب</h2>
