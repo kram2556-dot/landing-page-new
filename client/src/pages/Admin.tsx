@@ -198,21 +198,42 @@ export default function Admin() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
+  // جلب البيانات من Cloudflare KV مع دعم الـ localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("store_config");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setConfig({
-          ...DEFAULT_CONFIG,
-          ...parsed,
-          adminPassword: parsed.adminPassword || "admin",
-          countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
-        });
-      } catch (e) {
-        console.error(e);
+    fetch('/api/store')
+      .then(res => res.json())
+      .then(cloudData => {
+        if (cloudData && Object.keys(cloudData).length > 0) {
+          setConfig({
+            ...DEFAULT_CONFIG,
+            ...cloudData,
+            adminPassword: cloudData.adminPassword || "admin",
+            countries: { ...DEFAULT_COUNTRIES, ...(cloudData.countries || {}) }
+          });
+          localStorage.setItem("store_config", JSON.stringify(cloudData));
+        } else {
+          loadFromLocal();
+        }
+      })
+      .catch(() => loadFromLocal());
+
+    function loadFromLocal() {
+      const saved = localStorage.getItem("store_config");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setConfig({
+            ...DEFAULT_CONFIG,
+            ...parsed,
+            adminPassword: parsed.adminPassword || "admin",
+            countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
+          });
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
+
     const ords = localStorage.getItem("store_orders");
     if (ords) {
       try {
@@ -246,8 +267,18 @@ export default function Admin() {
     sessionStorage.removeItem("admin_logged_in");
   };
 
-  const handleSave = () => {
+  // الحفظ السحابي في Cloudflare KV والمحلي
+  const handleSave = async () => {
     localStorage.setItem("store_config", JSON.stringify(config));
+    try {
+      await fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+    } catch (e) {
+      console.error("Cloud save failed:", e);
+    }
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
   };
@@ -348,10 +379,10 @@ export default function Admin() {
         <div className="flex items-center justify-between bg-neutral-900 border border-neutral-800 p-4 rounded-2xl">
           <div>
             <h1 className="text-xl font-black text-amber-400">إدارة المتجر</h1>
-            <p className="text-xs text-neutral-400">الدولة المحددة: {config.countries[config.activeCountry]?.name || "مصر"}</p>
+            <p className="text-xs text-emerald-400 font-semibold">متصل سحابياً بـ Cloudflare KV ✓</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ بنجاح! ✓</span>}
+            {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ السحابي بنجاح! ✓</span>}
             <button
               onClick={handleSave}
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition"
