@@ -1,111 +1,121 @@
-async function hashPBKDF2(password: string): Promise<string> {
-  const salt = new Uint8Array(16);
-  crypto.getRandomValues(salt);
+export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (context) => {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const origin = request.headers.get("Origin") || "";
 
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits", "deriveKey"]
-  );
-
-  const derivedKey = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 210000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    256
-  );
-
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-  const keyHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
-
-  return `${saltHex}:${keyHex}`;
-}
-
-export async function onRequestGet(context: any) {
-  try {
-    const raw = await context.env.STORE_KV.get("STORE_CONFIG");
-    let data = raw ? JSON.parse(raw) : {};
-
-    const token = context.request.headers.get("x-admin-token");
-    let isAdmin = false;
-    if (token) {
-      const session = await context.env.STORE_KV.get(`session:${token}`);
-      if (session === "active") isAdmin = true;
-    }
-
-    delete data.adminPassword;
-    delete data.adminPasswordHash;
-
-    if (!isAdmin) {
-      delete data.metaAccessToken;
-    }
-
-    return new Response(JSON.stringify(data), {
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (err: any) {
-    return new Response(JSON.stringify({}), { status: 500 });
+  // حماية CORS: السماح فقط بنفس النطاق أو النطاقات المصرح لها
+  const corsHeaders: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
+  };
+  if (origin && (origin === url.origin || origin.endsWith(".pages.dev"))) {
+    corsHeaders["Access-Control-Allow-Origin"] = origin;
   }
-}
 
-export async function onRequestPost(context: any) {
-  try {
-    const token = context.request.headers.get("x-admin-token");
-    if (!token) {
-      return new Response(JSON.stringify({ error: "غير مصرح" }), { status: 401 });
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // 1. طلب جلب الإعدادات (GET)
+  if (request.method === "GET") {
+    const rawData = await env.STORE_KV.get("STORE_CONFIG");
+    if (!rawData) {
+      return new Response(JSON.stringify({}), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    const session = await context.env.STORE_KV.get(`session:${token}`);
+    const storeData = JSON.parse(rawData);
+
+    // التحقق هل الطالب هو الأدمن؟
+    const adminToken = request.headers.get("x-admin-token");
+    let isAuthed = false;
+    if (adminToken) {
+      const session = await env.STORE_KV.get(`session:${adminToken}`);
+      if (session) isAuthed = true;
+    }
+
+    // إذا لم يكن أدمن مسجل، احذف البيانات الحساسة فوراً!
+    if (!isAuthed) {
+      delete storeData.adminEmail;
+      delete storeData.adminPassword;
+      delete storeData.adminPasswordHash;
+      delete storeData.metaAccessToken; // حماية توكن الفيسبوك السري
+    }
+
+    return new Response(JSON.stringify(storeData), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  // 2. طلب تعديل الإعدادات (POST) - يتطلب صلاحيات أدمن مؤكدة
+  if (request.method === "POST") {
+    const adminToken = request.headers.get("x-admin-token");
+    if (!adminToken) {
+      return new Response(JSON.stringify({ error: "غير مصرح لك بتعديل البيانات" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const session = await env.STORE_KV.get(`session:${adminToken}`);
     if (!session) {
-      return new Response(JSON.stringify({ error: "انتهت الجلسة، سجل دخولك ثانية" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "انتهت صلاحية الجلسة" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    const newData = await context.request.json();
-    const existingRaw = await context.env.STORE_KV.get("STORE_CONFIG");
-    const existing = existingRaw ? JSON.parse(existingRaw) : {};
+    const incomingData = await request.json() as Record<string, any>;
+    const rawExisting = await env.STORE_KV.get("STORE_CONFIG");
+    const existingData = rawExisting ? JSON.parse(rawExisting) : {};
 
-    if (newData.adminPassword && newData.adminPassword.trim() !== "") {
-      newData.adminPasswordHash = await hashPBKDF2(newData.adminPassword);
-      delete newData.adminPassword;
+    // معالجة كلمة المرور الجديدة إن وجدت (PBKDF2)
+    if (incomingData.adminPassword && incomingData.adminPassword.trim() !== "") {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(incomingData.adminPassword),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
+      const hash = await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+      );
+      const rawHash = await crypto.subtle.exportKey("raw", hash);
+      const hashArray = Array.from(new Uint8Array(rawHash));
+      const saltArray = Array.from(salt);
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      const saltHex = saltArray.map(b => b.toString(16).padStart(2, "0")).join("");
 
-      try {
-        const sessionList = await context.env.STORE_KV.list({ prefix: "session:" });
-        for (const sKey of (sessionList.keys || [])) {
-          if (sKey.name !== `session:${token}`) {
-            await context.env.STORE_KV.delete(sKey.name);
-          }
-        }
-      } catch (e) {
-        console.error("Session cleanup error:", e);
-      }
+      incomingData.adminPasswordHash = `${saltHex}:${hashHex}`;
+      delete incomingData.adminPassword; // مسح النص الصريح
     } else {
-      newData.adminPasswordHash = existing.adminPasswordHash;
-      delete newData.adminPassword;
-    }
-
-    if (newData.metaAccessToken === undefined || newData.metaAccessToken === "") {
-      if (existing.metaAccessToken) {
-        newData.metaAccessToken = existing.metaAccessToken;
+      // الحفاظ على الهاش الحالي لو لم تتغير كلمة السر
+      if (existingData.adminPasswordHash) {
+        incomingData.adminPasswordHash = existingData.adminPasswordHash;
       }
     }
 
-    await context.env.STORE_KV.put("STORE_CONFIG", JSON.stringify(newData));
+    // دمج وحفظ البيانات
+    const merged = { ...existingData, ...incomingData };
+    await env.STORE_KV.put("STORE_CONFIG", JSON.stringify(merged));
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (err: any) {
-    console.error("Store Error:", err);
-    return new Response(JSON.stringify({ error: "حدث خطأ في معالجة البيانات" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
-}
+
+  return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+};
