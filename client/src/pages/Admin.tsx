@@ -1,468 +1,830 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { 
-  ShoppingBag, 
-  Settings, 
-  Palette, 
-  Image as ImageIcon, 
-  MessageSquare, 
-  ShieldCheck, 
-  Lock, 
-  LogOut, 
-  Save, 
-  Plus, 
-  Trash2, 
-  CheckCircle2,
-  AlertCircle,
-  BarChart3
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+
+export type ThemeType = "sneakers" | "perfume" | "fashion" | "medical" | "home" | "kids";
+
+export interface ProvinceItem {
+  id: string;
+  name: string;
+  enabled: boolean;
+  shippingCost: number;
+}
+
+export interface CountryConfig {
+  code: string;
+  name: string;
+  currency: string;
+  phoneCode: string;
+  provinces: ProvinceItem[];
+}
+
+export interface GalleryItem {
+  id: string;
+  image: string;
+  caption: string;
+}
+
+export interface BundleItem {
+  qty: number;
+  title: string;
+  price: number;
+  badge?: string;
+  savings?: string;
+}
+
+export interface ReviewItem {
+  name: string;
+  comment: string;
+  rating: number;
+}
+
+export interface StoreConfig {
+  storeName: string;
+  adminEmail: string;
+  adminPassword?: string;
+  logoUrl: string;
+  selectedTheme: ThemeType;
+  showTopBar: boolean;
+  topBarText: string;
+  showTimer: boolean;
+  timerMinutes: number;
+  showStockBar: boolean;
+  stockLeft: number;
+  showBadge: boolean;
+  badgeText: string;
+  guaranteeBadgeText: string;
+  showRecentSales: boolean;
+  showStickyButton: boolean;
+  showSupportWhatsapp: boolean;
+  supportWhatsappNumber: string;
+  activeCountry: string;
+  countries: Record<string, CountryConfig>;
+  productTitle: string;
+  productImage: string;
+  gallery: GalleryItem[];
+  currentPrice: number;
+  oldPrice: number;
+  features: string[];
+  enableSizes: boolean;
+  sizes: string;
+  enableColors: boolean;
+  colors: string;
+  showBundles: boolean;
+  bundles: BundleItem[];
+  showGuarantee: boolean;
+  guaranteeText: string;
+  guaranteeSubtext?: string;
+  showReviews: boolean;
+  reviews: ReviewItem[];
+  whatsappNumber: string;
+  metaPixelId: string;
+  tiktokPixelId: string;
+  googlePixelId: string;
+}
+
+const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
+  EG: {
+    code: "EG",
+    name: "مصر",
+    currency: "ج.م",
+    phoneCode: "+20",
+    provinces: [
+      { id: "cairo", name: "القاهرة", enabled: true, shippingCost: 0 },
+      { id: "giza", name: "الجيزة", enabled: true, shippingCost: 0 },
+      { id: "alex", name: "الإسكندرية", enabled: true, shippingCost: 0 }
+    ]
+  },
+  SA: {
+    code: "SA",
+    name: "السعودية",
+    currency: "ر.س",
+    phoneCode: "+966",
+    provinces: [
+      { id: "riyadh", name: "الرياض", enabled: true, shippingCost: 0 },
+      { id: "jeddah", name: "جدة", enabled: true, shippingCost: 0 }
+    ]
+  },
+  AE: {
+    code: "AE",
+    name: "الإمارات",
+    currency: "د.إ",
+    phoneCode: "+971",
+    provinces: [
+      { id: "dubai", name: "دبي", enabled: true, shippingCost: 0 },
+      { id: "abudhabi", name: "أبوظبي", enabled: true, shippingCost: 0 }
+    ]
+  },
+  LY: {
+    code: "LY",
+    name: "ليبيا",
+    currency: "د.ل",
+    phoneCode: "+218",
+    provinces: [
+      { id: "tripoli", name: "طرابلس", enabled: true, shippingCost: 0 },
+      { id: "benghazi", name: "بنغازي", enabled: true, shippingCost: 0 }
+    ]
+  }
+};
+
+const DEFAULT_CONFIG: StoreConfig = {
+  storeName: "متجر النخبة",
+  adminEmail: "admin@example.com",
+  adminPassword: "admin",
+  logoUrl: "",
+  selectedTheme: "sneakers",
+  showTopBar: true,
+  topBarText: "عرض خاص لفترة محدودة — شحن سريع وتوصيل للمنزل",
+  showTimer: true,
+  timerMinutes: 15,
+  showStockBar: true,
+  stockLeft: 7,
+  showBadge: true,
+  badgeText: "معاينة مجانية للمنتج قبل الدفع",
+  guaranteeBadgeText: "يشمل التوصيل والتغليف",
+  showRecentSales: true,
+  showStickyButton: true,
+  showSupportWhatsapp: true,
+  supportWhatsappNumber: "+201000000000",
+  activeCountry: "EG",
+  countries: DEFAULT_COUNTRIES,
+  productTitle: "حذاء مريح وخفيف للجري والمشي الطويل",
+  productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
+  gallery: [],
+  currentPrice: 320,
+  oldPrice: 500,
+  features: [
+    "خامات ممتازة ومرنة تمنح القدم تهوية وراحة تامة",
+    "نعل ممتص للصدمات ومقاوم للانزلاق في كل الأوقات",
+    "معاينة وقياس مجاني بالكامل قبل دفع أي مليم للمندوب"
+  ],
+  enableSizes: true,
+  sizes: "41, 42, 43, 44, 45",
+  enableColors: true,
+  colors: "أسود, كحلي, رمادي, أصفر",
+  showBundles: true,
+  bundles: [
+    { qty: 1, title: "قطعة واحدة", price: 320 },
+    { qty: 2, title: "قطعتان (باقة التوفير)", price: 580, badge: "الأكثر طلباً", savings: "وفر 60" }
+  ],
+  showGuarantee: true,
+  guaranteeText: "معاينة مجانية كاملة عند باب منزلك قبل السداد",
+  guaranteeSubtext: "يحق لك فحص الجودة وتجربة المقاس مع المندوب دون أي التزام",
+  showReviews: true,
+  reviews: [
+    { name: "محمود س.", comment: "ممتاز جداً وخامته مريحة ومطابق للوصف بالظبط.", rating: 5 }
+  ],
+  whatsappNumber: "+201000000000",
+  metaPixelId: "",
+  tiktokPixelId: "",
+  googlePixelId: ""
+};
+
+const THEMES_LIST = [
+  { id: "sneakers" as ThemeType, name: "أحذية ورياضة (Street Sneakers)", desc: "داكن كربوني / برتقالي ناري محفز", color: "#f59e0b" },
+  { id: "perfume" as ThemeType, name: "عطور وتجميل (Royal Perfume)", desc: "بنفسجي ليلي ملكي / ذهب شمبانيا", color: "#dfba73" },
+  { id: "fashion" as ThemeType, name: "ملابس وأزياء (Fashion Elegance)", desc: "إسبريسو دافئ / برونزي توسكاني", color: "#d4a373" },
+  { id: "medical" as ThemeType, name: "منتجات طبية وصحية (Clinical Clean)", desc: "أبيض بورسلين نقي / أزرق ملكي كحلي", color: "#0284c7" },
+  { id: "home" as ThemeType, name: "أدوات منزلية وإلكترونيات (Home & Tech)", desc: "كحلي تكنولوجي داكن / تيتانيوم أزرق", color: "#3b82f6" },
+  { id: "kids" as ThemeType, name: "ألعاب أطفال وهدايا (Kids Joy)", desc: "رمادي ناعم ونظيف / أخضر زمردي مبهج", color: "#10b981" }
+];
 
 export default function Admin() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
+  const [activeTab, setActiveTab] = useState<"product" | "themes" | "shipping" | "marketing" | "settings" | "orders">("product");
+  const [savedMsg, setSavedMsg] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
 
-  // Master Store Settings State
-  const [settings, setSettings] = useState({
-    adminEmail: 'admin@example.com',
-    adminPassword: 'admin',
-    theme: 'sneakers',
-    storeName: 'متجر النخبة',
-    storeTagline: 'أفضل العروض الحصرية مع شحن مجاني وضمان استبدال',
-    productName: 'حذاء أورا سنيكرز الرياضي العصري',
-    productSubtitle: 'خفة لا مثيل لها وراحة تدوم طوال اليوم',
-    originalPrice: '1200',
-    salePrice: '750',
-    currency: 'ج.م',
-    metaPixelId: '',
-    tiktokPixelId: '',
-    googleAdsId: '',
-    googleEventLabel: '',
-    shippingFee: 'مجاني',
-    phoneRequired: true,
-    addressRequired: true,
-    governorates: 'القاهرة, الجيزة, الإسكندرية, الشرقية, الدقهلية, القليوبية, المنوفية, الغربية, كفر الشيخ, البحيرة, الفيوم, بني سويف, المنيا, أسيوط, سوهاج, قنا, الأقصر, أسوان, البحر الأحمر, الوادي الجديد, مطروح, شمال سيناء, جنوب سيناء, السويس, الإسماعيلية, بورسعيد, دمياط',
-    colors: [
-      { name: 'أسود ملوكي', hex: '#000000' },
-      { name: 'أبيض كلاسيك', hex: '#FFFFFF' },
-      { name: 'رمادي عصري', hex: '#6B7280' }
-    ],
-    sizes: ['40', '41', '42', '43', '44', '45'],
-    heroBadges: [
-      { text: 'شحن مجاني وسريع', icon: 'truck' },
-      { text: 'الدفع عند الاستلام', icon: 'shield' },
-      { text: 'معاينة المنتج قبل الدفع', icon: 'check' },
-      { text: 'ضمان استرجاع 14 يوم', icon: 'rotate' }
-    ],
-    galleryImages: [
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=800&q=80'
-    ],
-    reviews: [
-      { name: 'أحمد محمود', rating: 5, comment: 'جودة ممتازة جداً ومريحة في المشي والتوصيل سريع جداً.' },
-      { name: 'سارة طارق', rating: 5, comment: 'نفس الصورة بالظبط والخامة نضيفة جداً شكراً ليكم.' },
-      { name: 'محمد إبراهيم', rating: 4, comment: 'المنتج محترم ووصل في خلال يومين مع إمكانية المعاينة.' }
-    ]
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
 
-  // Load Settings from KV endpoint
   useEffect(() => {
-    fetch('/api/store')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Object.keys(data).length > 0) {
-          setSettings(prev => ({ ...prev, ...data }));
-        }
-      })
-      .catch(err => console.error('Error loading settings from Cloudflare KV:', err));
+    const saved = localStorage.getItem("store_config");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setConfig({
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          adminPassword: parsed.adminPassword || "admin",
+          countries: { ...DEFAULT_COUNTRIES, ...(parsed.countries || {}) }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const ords = localStorage.getItem("store_orders");
+    if (ords) {
+      try {
+        setOrders(JSON.parse(ords));
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
-    const authSession = sessionStorage.getItem('admin_authenticated');
-    if (authSession === 'true') {
+    if (sessionStorage.getItem("admin_logged_in") === "true") {
       setIsAuthenticated(true);
     }
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginEmail === settings.adminEmail && loginPassword === settings.adminPassword) {
+    const correctEmail = config.adminEmail || "admin@example.com";
+    const correctPass = config.adminPassword || "admin";
+
+    if (loginEmail.trim().toLowerCase() === correctEmail.trim().toLowerCase() && loginPassword === correctPass) {
       setIsAuthenticated(true);
-      sessionStorage.setItem('admin_authenticated', 'true');
-      setLoginError('');
+      sessionStorage.setItem("admin_logged_in", "true");
+      setLoginError("");
     } else {
-      setLoginError('بيانات الدخول غير صحيحة، يرجى المحاولة مرة أخرى');
+      setLoginError("بيانات الدخول غير صحيحة، يرجى التأكد من البريد وكلمة السر");
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    sessionStorage.removeItem('admin_authenticated');
+    sessionStorage.removeItem("admin_logged_in");
   };
 
-  const handleSave = async () => {
-    setSaveStatus('saving');
-    try {
-      const response = await fetch('/api/store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
+  const handleSave = () => {
+    localStorage.setItem("store_config", JSON.stringify(config));
+    setSavedMsg(true);
+    setTimeout(() => setSavedMsg(false), 3000);
+  };
 
-      if (response.ok) {
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } else {
-        setSaveStatus('error');
-      }
-    } catch (err) {
-      console.error('Save error:', err);
-      setSaveStatus('error');
-    }
+  const compressAndSetImage = (file: File, callback: (base64: string) => void) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 900;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+        callback(compressedBase64);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-['Cairo']" dir="rtl">
-        <Card className="w-full max-w-md shadow-xl border-slate-200">
-          <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
-              <Lock className="w-8 h-8" />
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 font-sans" dir="rtl">
+        <div className="bg-neutral-900 border border-neutral-800 p-7 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
+          <div className="text-center space-y-1">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold border border-amber-500/20">
+              🔒
             </div>
-            <CardTitle className="text-2xl font-bold">تسجيل الدخول للوحة التحكم</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">أدخل بيانات المدير لإدارة المتجر والإعدادات</p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              {loginError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
-                <Input 
-                  type="email" 
-                  value={loginEmail} 
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="admin@example.com"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>كلمة المرور</Label>
-                <Input 
-                  type="password" 
-                  value={loginPassword} 
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full text-base font-bold py-5">
-                دخول اللوحة
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <h1 className="text-xl font-black text-amber-400">لوحة تحكم المتجر</h1>
+            <p className="text-xs text-neutral-400">أدخل بيانات المدير لتسجيل الدخول</p>
+          </div>
+
+          {loginError && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs text-center font-bold">
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-bold">البريد الإلكتروني</label>
+              <input
+                type="email"
+                required
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder={config.adminEmail}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1 font-bold">كلمة المرور</label>
+              <input
+                type="password"
+                required
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="كلمة السر"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-xl text-sm transition shadow-lg"
+            >
+              تسجيل الدخول
+            </button>
+          </form>
+
+          <div className="text-center">
+            <a href="/" className="text-xs text-neutral-500 hover:text-neutral-400">الرجوع للمتجر</a>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Cairo'] pb-20" dir="rtl">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-white p-2 rounded-lg">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">لوحة تحكم المتجر</h1>
-              <p className="text-xs text-muted-foreground">متصل سحابياً بـ Cloudflare KV</p>
-            </div>
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 sm:p-6" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        {/* شريط الإدارة العلوي */}
+        <div className="flex items-center justify-between bg-neutral-900 border border-neutral-800 p-4 rounded-2xl">
+          <div>
+            <h1 className="text-xl font-black text-amber-400">إدارة المتجر</h1>
+            <p className="text-xs text-neutral-400">الدولة المحددة: {config.countries[config.activeCountry]?.name || "مصر"}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleSave} 
-              disabled={saveStatus === 'saving'}
-              className="font-bold flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+          <div className="flex items-center gap-2 sm:gap-3">
+            {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ بنجاح! ✓</span>}
+            <button
+              onClick={handleSave}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition"
             >
-              {saveStatus === 'saving' ? (
-                <span>جاري الحفظ...</span>
-              ) : saveStatus === 'saved' ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>تم الحفظ السحابي!</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>حفظ التعديلات</span>
-                </>
-              )}
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleLogout} title="تسجيل الخروج">
-              <LogOut className="w-4 h-4 text-slate-600" />
-            </Button>
+              حفظ التعديلات
+            </button>
+            <a href="/" target="_blank" className="bg-neutral-800 hover:bg-neutral-700 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition">
+              عرض المتجر ↗
+            </a>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition"
+            >
+              خروج
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* Main Tabs */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <Tabs defaultValue="product" className="space-y-6">
-          <TabsList className="bg-white p-1 border border-slate-200 rounded-xl grid grid-cols-2 md:grid-cols-6 gap-1 h-auto">
-            <TabsTrigger value="product" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <ShoppingBag className="w-4 h-4 ml-2 inline-block" /> المنتج والسعر
-            </TabsTrigger>
-            <TabsTrigger value="design" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <Palette className="w-4 h-4 ml-2 inline-block" /> الثيم والتصميم
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <ImageIcon className="w-4 h-4 ml-2 inline-block" /> معرض الصور
-            </TabsTrigger>
-            <TabsTrigger value="pixels" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <BarChart3 className="w-4 h-4 ml-2 inline-block" /> بكسلات التتبع
-            </TabsTrigger>
-            <TabsTrigger value="reviews" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <MessageSquare className="w-4 h-4 ml-2 inline-block" /> التقييمات والضمانات
-            </TabsTrigger>
-            <TabsTrigger value="security" className="data-[state=active]:bg-primary data-[state=active]:text-white font-bold py-2.5">
-              <ShieldCheck className="w-4 h-4 ml-2 inline-block" /> الأمان والمدير
-            </TabsTrigger>
-          </TabsList>
+        {/* أزرار التبويبات الشاملة */}
+        <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
+          {[
+            { id: "product", name: "المنتج والعروض" },
+            { id: "themes", name: "ثيمات الألوان (6 ثيمات)" },
+            { id: "shipping", name: "الشحن والمحافظات" },
+            { id: "marketing", name: "التسويق والبكسل (ميتا/تيك توك/جوجل)" },
+            { id: "settings", name: "حساب الإدارة والأمان (الباسورد)" },
+            { id: "orders", name: `الطلبات (${orders.length})` }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+                activeTab === tab.id ? "bg-amber-500 text-black shadow-md" : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
 
-          {/* Tab 1: Product & Pricing */}
-          <TabsContent value="product" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>بيانات المنتج الأساسية والأسعار</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>اسم المتجر</Label>
-                    <Input value={settings.storeName} onChange={e => setSettings({...settings, storeName: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>اسم المنتج الرئيسي</Label>
-                    <Input value={settings.productName} onChange={e => setSettings({...settings, productName: e.target.value})} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>الوصف الترويجي المختصر</Label>
-                  <Textarea value={settings.productSubtitle} onChange={e => setSettings({...settings, productSubtitle: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>السعر بعد الخصم (سعر البيع)</Label>
-                    <Input value={settings.salePrice} onChange={e => setSettings({...settings, salePrice: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>السعر قبل الخصم (المشطوب)</Label>
-                    <Input value={settings.originalPrice} onChange={e => setSettings({...settings, originalPrice: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>العملة</Label>
-                    <Input value={settings.currency} onChange={e => setSettings({...settings, currency: e.target.value})} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* 1. تبويب المنتج والعروض */}
+        {activeTab === "product" && (
+          <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">بيانات المنتج وتفاصيل العرض</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">اسم المتجر</label>
+                <input
+                  type="text"
+                  value={config.storeName}
+                  onChange={(e) => setConfig({ ...config, storeName: e.target.value })}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs sm:text-sm"
+                />
+              </div>
 
-          {/* Tab 2: Theme & Design */}
-          <TabsContent value="design" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>نمط المتجر والألوان</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>اختر هوية وثيم المتجر</Label>
-                  <select 
-                    className="w-full h-10 px-3 border border-slate-200 rounded-md bg-white"
-                    value={settings.theme}
-                    onChange={e => setSettings({...settings, theme: e.target.value})}
-                  >
-                    <option value="sneakers">أحذية وسنيكرز (Sneakers)</option>
-                    <option value="perfume">عطور وبخور (Perfume)</option>
-                    <option value="fashion">أزياء وملابس (Fashion)</option>
-                    <option value="medical">منتجات طبية وصحية (Medical)</option>
-                    <option value="home">منزل وديكور (Home)</option>
-                    <option value="kids">أطفال وألعاب (Kids)</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">عنوان المنتج الرئيسي</label>
+                <input
+                  type="text"
+                  value={config.productTitle}
+                  onChange={(e) => setConfig({ ...config, productTitle: e.target.value })}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs sm:text-sm font-bold"
+                />
+              </div>
 
-          {/* Tab 3: Gallery */}
-          <TabsContent value="gallery" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>روابط صور المعرض</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {settings.galleryImages.map((img, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <Input 
-                      value={img} 
-                      onChange={e => {
-                        const newImgs = [...settings.galleryImages];
-                        newImgs[idx] = e.target.value;
-                        setSettings({...settings, galleryImages: newImgs});
-                      }} 
-                    />
-                    <Button 
-                      variant="destructive" 
-                      size="icon"
-                      onClick={() => {
-                        const newImgs = settings.galleryImages.filter((_, i) => i !== idx);
-                        setSettings({...settings, galleryImages: newImgs});
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">السعر الحالي</label>
+                  <input
+                    type="number"
+                    value={config.currentPrice}
+                    onChange={(e) => setConfig({ ...config, currentPrice: Number(e.target.value) })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm font-bold text-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">السعر القديم (المشطوب)</label>
+                  <input
+                    type="number"
+                    value={config.oldPrice}
+                    onChange={(e) => setConfig({ ...config, oldPrice: Number(e.target.value) })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">رابط صورة المنتج أو رفع ملف</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.productImage}
+                    onChange={(e) => setConfig({ ...config, productImage: e.target.value })}
+                    className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs"
+                  />
+                  <label className="bg-neutral-800 hover:bg-neutral-700 px-4 py-3 rounded-xl text-xs font-bold cursor-pointer transition">
+                    رفع صورة
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) compressAndSetImage(file, (base64) => setConfig({ ...config, productImage: base64 }));
                       }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSettings({...settings, galleryImages: [...settings.galleryImages, '']})}
-                  className="w-full flex gap-2 items-center"
-                >
-                  <Plus className="w-4 h-4" /> إضافة رابط صورة جديد
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    />
+                  </label>
+                </div>
+              </div>
 
-          {/* Tab 4: Marketing Pixels */}
-          <TabsContent value="pixels" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>بكسلات التتبع الإعلاني (Meta, TikTok, Google)</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Meta Pixel ID (Facebook)</Label>
-                  <Input 
-                    placeholder="مثال: 123456789012345" 
-                    value={settings.metaPixelId} 
-                    onChange={e => setSettings({...settings, metaPixelId: e.target.value})} 
+              {/* التحكم في شريط كارت الصورة (المعاينة وبادج التوصيل) */}
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-amber-400 block">شريط أسفل صورة المنتج (المعاينة والبادج)</label>
+                    <span className="text-[10px] text-neutral-500">يمكنك إيقافه بالكامل، أو تعديل نصوصه، أو حذف البادج بمسح خانته</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={config.showBadge}
+                    onChange={(e) => setConfig({ ...config, showBadge: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>TikTok Pixel ID</Label>
-                  <Input 
-                    placeholder="مثال: C1234567890ABCDEF" 
-                    value={settings.tiktokPixelId} 
-                    onChange={e => setSettings({...settings, tiktokPixelId: e.target.value})} 
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Google Ads Conversion ID</Label>
-                    <Input 
-                      placeholder="AW-123456789" 
-                      value={settings.googleAdsId} 
-                      onChange={e => setSettings({...settings, googleAdsId: e.target.value})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Google Conversion Label</Label>
-                    <Input 
-                      placeholder="AbCdEfGhIjK" 
-                      value={settings.googleEventLabel} 
-                      onChange={e => setSettings({...settings, googleEventLabel: e.target.value})} 
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 5: Reviews & Guarantees */}
-          <TabsContent value="reviews" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>شهادات العملاء والتقييمات</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {settings.reviews.map((rev, idx) => (
-                  <div key={idx} className="p-4 border rounded-lg space-y-2 relative bg-slate-50">
-                    <div className="flex justify-between items-center">
-                      <Input 
-                        placeholder="اسم العميل" 
-                        value={rev.name} 
-                        onChange={e => {
-                          const newRevs = [...settings.reviews];
-                          newRevs[idx].name = e.target.value;
-                          setSettings({...settings, reviews: newRevs});
-                        }} 
-                        className="w-1/2 bg-white"
+                {config.showBadge && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">النص الأيمن (المعاينة)</label>
+                      <input
+                        type="text"
+                        value={config.badgeText}
+                        onChange={(e) => setConfig({ ...config, badgeText: e.target.value })}
+                        placeholder="معاينة مجانية للمنتج قبل الدفع"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
                       />
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-red-500"
-                        onClick={() => {
-                          const newRevs = settings.reviews.filter((_, i) => i !== idx);
-                          setSettings({...settings, reviews: newRevs});
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
-                    <Textarea 
-                      placeholder="تعليق العميل" 
-                      value={rev.comment} 
-                      onChange={e => {
-                        const newRevs = [...settings.reviews];
-                        newRevs[idx].comment = e.target.value;
-                        setSettings({...settings, reviews: newRevs});
-                      }} 
-                      className="bg-white"
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">بادج الشحن والتغليف (اتركه فارغاً لإلغائه)</label>
+                      <input
+                        type="text"
+                        value={config.guaranteeBadgeText}
+                        onChange={(e) => setConfig({ ...config, guaranteeBadgeText: e.target.value })}
+                        placeholder="يشمل التوصيل والتغليف"
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* المقاسات والألوان */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold">تفعيل اختيار المقاسات</label>
+                    <input
+                      type="checkbox"
+                      checked={config.enableSizes}
+                      onChange={(e) => setConfig({ ...config, enableSizes: e.target.checked })}
+                      className="w-4 h-4 accent-amber-500"
                     />
                   </div>
-                ))}
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSettings({...settings, reviews: [...settings.reviews, { name: '', rating: 5, comment: '' }]})}
-                  className="w-full flex gap-2 items-center"
-                >
-                  <Plus className="w-4 h-4" /> إضافة تقييم جديد
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <input
+                    type="text"
+                    value={config.sizes}
+                    onChange={(e) => setConfig({ ...config, sizes: e.target.value })}
+                    placeholder="41, 42, 43 أو 41، 42، 43"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
+                  />
+                </div>
 
-          {/* Tab 6: Security & Credentials */}
-          <TabsContent value="security" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>بيانات حساب مدير المتجر</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني لتسجيل الدخول</Label>
-                  <Input 
-                    type="email" 
-                    value={settings.adminEmail} 
-                    onChange={e => setSettings({...settings, adminEmail: e.target.value})} 
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold">تفعيل اختيار الألوان (دوائر ملونة)</label>
+                    <input
+                      type="checkbox"
+                      checked={config.enableColors}
+                      onChange={(e) => setConfig({ ...config, enableColors: e.target.checked })}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={config.colors}
+                    onChange={(e) => setConfig({ ...config, colors: e.target.value })}
+                    placeholder="أسود, كحلي, رمادي, أصفر"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>كلمة المرور الجديدة</Label>
-                  <Input 
-                    type="password" 
-                    value={settings.adminPassword} 
-                    onChange={e => setSettings({...settings, adminPassword: e.target.value})} 
+              </div>
+
+              {/* معرض الصور التوضيحي مع الشرح */}
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xs font-bold text-neutral-300">معرض الصور التوضيحي مع الشرح</h3>
+                  <label className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition">
+                    + إضافة صورة للمعرض
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          compressAndSetImage(file, (base64) => {
+                            const newG: GalleryItem = { id: String(Date.now()), image: base64, caption: "" };
+                            setConfig({ ...config, gallery: [...config.gallery, newG] });
+                          });
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-3">
+                  {config.gallery.map((item, idx) => (
+                    <div key={item.id} className="flex gap-3 bg-neutral-950 border border-neutral-800 p-3 rounded-xl items-center">
+                      <img src={item.image} alt="Thumb" className="w-16 h-16 object-cover rounded-lg border border-neutral-800" />
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={item.caption}
+                          placeholder="اكتب شرحاً أو تعليقاً توضيحياً لهذه الصورة"
+                          onChange={(e) => {
+                            const updated = [...config.gallery];
+                            updated[idx].caption = e.target.value;
+                            setConfig({ ...config, gallery: updated });
+                          }}
+                          className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-xs"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setConfig({ ...config, gallery: config.gallery.filter((_, i) => i !== idx) })}
+                        className="text-red-400 hover:text-red-300 text-xs px-2"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. تبويب ثيمات الألوان الستة */}
+        {activeTab === "themes" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">اختر ثيم المتجر الجاهز</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {THEMES_LIST.map((th) => {
+                const isSelected = config.selectedTheme === th.id;
+                return (
+                  <div
+                    key={th.id}
+                    onClick={() => setConfig({ ...config, selectedTheme: th.id })}
+                    className={`cursor-pointer p-4 rounded-xl border-2 transition flex items-center justify-between ${
+                      isSelected ? "border-amber-400 bg-amber-500/10" : "border-neutral-800 bg-neutral-950 hover:border-neutral-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span style={{ backgroundColor: th.color }} className="w-5 h-5 rounded-full shadow-md flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-white">{th.name}</p>
+                        <p className="text-[11px] text-neutral-400">{th.desc}</p>
+                      </div>
+                    </div>
+                    {isSelected && <span className="text-amber-400 font-bold text-xs">✓ مفعل</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 3. تبويب الشحن والمحافظات */}
+        {activeTab === "shipping" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">إدارة أسعار الشحن والمحافظات</h2>
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-neutral-400">الدولة المستهدفة:</label>
+              <select
+                value={config.activeCountry}
+                onChange={(e) => setConfig({ ...config, activeCountry: e.target.value })}
+                className="bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs font-bold"
+              >
+                {Object.values(config.countries).map((c) => (
+                  <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {config.countries[config.activeCountry]?.provinces.map((prov, idx) => (
+                <div key={prov.id} className="flex items-center justify-between bg-neutral-950 border border-neutral-800 p-3 rounded-xl text-xs">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={prov.enabled}
+                      onChange={(e) => {
+                        const updated = { ...config };
+                        updated.countries[config.activeCountry].provinces[idx].enabled = e.target.checked;
+                        setConfig(updated);
+                      }}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <span className="font-bold">{prov.name}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span>تكلفة الشحن:</span>
+                    <input
+                      type="number"
+                      value={prov.shippingCost}
+                      onChange={(e) => {
+                        const updated = { ...config };
+                        updated.countries[config.activeCountry].provinces[idx].shippingCost = Number(e.target.value);
+                        setConfig(updated);
+                      }}
+                      className="w-20 bg-neutral-900 border border-neutral-800 rounded-lg p-1.5 text-center font-bold text-amber-400"
+                    />
+                    <span className="text-neutral-500">{config.countries[config.activeCountry]?.currency}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 4. تبويب التسويق والبكسل */}
+        {activeTab === "marketing" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">إعدادات التسويق وأكواد التتبع والبكسل</h2>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">رقم واتساب لاستقبال الطلبات</label>
+                <input
+                  type="text"
+                  value={config.whatsappNumber}
+                  onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })}
+                  placeholder="+201000000000"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">رقم واتساب لأيقونة الدعم العائمة</label>
+                <input
+                  type="text"
+                  value={config.supportWhatsappNumber}
+                  onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })}
+                  placeholder="+201000000000"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Meta Pixel ID (فيسبوك)</label>
+                  <input
+                    type="text"
+                    value={config.metaPixelId}
+                    onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })}
+                    placeholder="1234567890"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
                   />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">TikTok Pixel ID</label>
+                  <input
+                    type="text"
+                    value={config.tiktokPixelId}
+                    onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })}
+                    placeholder="C1234567890"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1 text-emerald-400">Google Ads Tag / Pixel ID (جوجل)</label>
+                  <input
+                    type="text"
+                    value={config.googlePixelId}
+                    onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })}
+                    placeholder="AW-123456789"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. تبويب حساب الإدارة والأمان (مع خانة كلمة السر) */}
+        {activeTab === "settings" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">حساب المدير والأمان للدخول للوحة</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">البريد الإلكتروني المعتمد للمدير</label>
+                <input
+                  type="email"
+                  value={config.adminEmail}
+                  onChange={(e) => setConfig({ ...config, adminEmail: e.target.value })}
+                  placeholder="admin@example.com"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold text-amber-400">كلمة المرور للدخول للوحة التحكم</label>
+                <input
+                  type="password"
+                  value={config.adminPassword || ""}
+                  onChange={(e) => setConfig({ ...config, adminPassword: e.target.value })}
+                  placeholder="اكتب كلمة مرور قوية"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono"
+                />
+                <p className="text-[11px] text-neutral-500 mt-1">احفظ كلمة المرور جيداً لأنك ستدخل بها في كل مرة تفتح لوحة التحكم.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 6. تبويب الطلبات المسجلة */}
+        {activeTab === "orders" && (
+          <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <div className="flex justify-between items-center">
+              <h2 className="font-bold text-base text-amber-400">سجل الطلبات ({orders.length})</h2>
+              {orders.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm("هل أنت متأكد من مسح جميع الطلبات؟")) {
+                      localStorage.removeItem("store_orders");
+                      setOrders([]);
+                    }
+                  }}
+                  className="text-red-400 hover:text-red-300 text-xs"
+                >
+                  مسح السجل
+                </button>
+              )}
+            </div>
+
+            {orders.length === 0 ? (
+              <p className="text-xs text-neutral-500 py-8 text-center">لا توجد طلبات مسجلة بعد</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {orders.map((ord, i) => (
+                  <div key={i} className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-1.5 text-xs">
+                    <div className="flex justify-between font-bold text-amber-400">
+                      <span>{ord.fullName}</span>
+                      <span>{ord.total} {ord.currency}</span>
+                    </div>
+                    <p className="text-neutral-300">الهاتف: {ord.phone} {ord.altPhone ? `(بديل: ${ord.altPhone})` : ""}</p>
+                    <p className="text-neutral-400">العنوان: {ord.governorate} — {ord.address}</p>
+                    {(ord.selectedSize || ord.selectedColor) && (
+                      <p className="text-neutral-400">
+                        {ord.selectedSize ? `المقاس: ${ord.selectedSize} ` : ""}
+                        {ord.selectedColor ? `| اللون: ${ord.selectedColor}` : ""}
+                      </p>
+                    )}
+                    {ord.notes && <p className="text-neutral-500 italic">ملاحظات: {ord.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
