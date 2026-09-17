@@ -13,3 +13,6 @@ migrations_dir = "drizzle"
 [vars]
 STORE_NAME = "LUMA Studio"
 DEFAULT_LOCALE = "ar"
+[[kv_namespaces]]
+binding = "STORE_KV"
+id = "STORE_KV"
