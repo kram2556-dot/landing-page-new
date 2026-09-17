@@ -1,4 +1,3 @@
-// client/src/pages/Admin.tsx
 import React, { useState, useEffect } from "react";
 
 export type ThemeType = "sneakers" | "perfume" | "fashion" | "medical" | "home" | "kids";
@@ -129,7 +128,7 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر النخبة",
   adminEmail: "admin@example.com",
-  adminPassword: "admin",
+  adminPassword: "",
   logoUrl: "",
   selectedTheme: "sneakers",
   showTopBar: true,
@@ -199,9 +198,16 @@ export default function Admin() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  const fetchCloudOrders = () => {
+  // حقول خاصة بتغيير الحساب لكلمة السر والإيميل
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passMsg, setPassMsg] = useState("");
+
+  const fetchCloudOrders = (token?: string) => {
+    const currentToken = token || sessionStorage.getItem("admin_token");
+    if (!currentToken) return;
     fetch('/api/orders', {
-      headers: { 'x-admin-token': 'SESSION_ACTIVE_AUTH_TOKEN' }
+      headers: { 'x-admin-token': currentToken }
     })
       .then(res => res.json())
       .then(data => {
@@ -218,61 +224,94 @@ export default function Admin() {
           setConfig({
             ...DEFAULT_CONFIG,
             ...cloudData,
-            adminPassword: cloudData.adminPassword || "admin",
+            adminPassword: "",
             countries: { ...DEFAULT_COUNTRIES, ...(cloudData.countries || {}) }
           });
         }
       })
       .catch(() => {});
 
-    if (sessionStorage.getItem("admin_logged_in") === "true") {
+    const existingToken = sessionStorage.getItem("admin_token");
+    if (existingToken) {
       setIsAuthenticated(true);
-      fetchCloudOrders();
+      fetchCloudOrders(existingToken);
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correctEmail = config.adminEmail || "admin@example.com";
-    const correctPass = config.adminPassword || "admin";
-
-    if (loginEmail.trim().toLowerCase() === correctEmail.trim().toLowerCase() && loginPassword === correctPass) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem("admin_logged_in", "true");
-      setLoginError("");
-      fetchCloudOrders();
-    } else {
-      setLoginError("بيانات الدخول غير صحيحة");
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem("admin_token", data.token);
+        setIsAuthenticated(true);
+        setLoginError("");
+        fetchCloudOrders(data.token);
+      } else {
+        setLoginError(data.error || "بيانات الدخول غير صحيحة");
+      }
+    } catch (err) {
+      setLoginError("تعذر الاتصال بخادم الحماية");
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    sessionStorage.removeItem("admin_logged_in");
+    sessionStorage.removeItem("admin_token");
   };
 
   const handleSave = async () => {
-    localStorage.setItem("store_config", JSON.stringify(config));
+    const token = sessionStorage.getItem("admin_token");
+    
+    // إذا كان العميل أدخل كلمة سر جديدة للتغيير
+    const payload = { ...config };
+    if (newPassword.trim() !== "") {
+      if (newPassword !== confirmPassword) {
+        setPassMsg("كلمتا المرور غير متطابقتين!");
+        return;
+      }
+      payload.adminPassword = newPassword;
+    }
+
     try {
-      await fetch('/api/store', {
+      const res = await fetch('/api/store', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || ""
+        },
+        body: JSON.stringify(payload)
       });
+      if (res.ok) {
+        setSavedMsg(true);
+        if (newPassword.trim() !== "") {
+          setPassMsg("تم تحديث كلمة المرور بنجاح! سيتم مطالبتك بها في تسجيل الدخول القادم.");
+          setNewPassword("");
+          setConfirmPassword("");
+        }
+        setTimeout(() => setSavedMsg(false), 4000);
+      } else {
+        alert("انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى");
+        handleLogout();
+      }
     } catch (e) {
       console.error(e);
     }
-    setSavedMsg(true);
-    setTimeout(() => setSavedMsg(false), 3000);
   };
 
   const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
+    const token = sessionStorage.getItem("admin_token");
     try {
       await fetch('/api/orders', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': 'SESSION_ACTIVE_AUTH_TOKEN'
+          'x-admin-token': token || ""
         },
         body: JSON.stringify({ id, status: newStatus })
       });
@@ -283,11 +322,12 @@ export default function Admin() {
   };
 
   const handleClearOrders = async () => {
+    const token = sessionStorage.getItem("admin_token");
     if (confirm("هل أنت متأكد من مسح جميع الطلبات نهائياً من السحابة؟")) {
       try {
         await fetch('/api/orders', { 
           method: 'DELETE',
-          headers: { 'x-admin-token': 'SESSION_ACTIVE_AUTH_TOKEN' }
+          headers: { 'x-admin-token': token || "" }
         });
         setOrders([]);
       } catch (e) {
@@ -360,17 +400,17 @@ export default function Admin() {
           <div className="text-center space-y-1">
             <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold border border-amber-500/20">🔒</div>
             <h1 className="text-xl font-black text-amber-400">لوحة تحكم المتجر</h1>
-            <p className="text-xs text-neutral-400">سجل الدخول لإدارة المتجر والطلبات</p>
+            <p className="text-xs text-neutral-400">تسجيل دخول آمن ومحمي بالسيرفر</p>
           </div>
           {loginError && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs text-center font-bold">{loginError}</div>}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-bold">البريد الإلكتروني</label>
-              <input type="email" required value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none" />
+              <input type="email" required value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="admin@example.com" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none" />
             </div>
             <div>
               <label className="block text-xs text-neutral-400 mb-1 font-bold">كلمة المرور</label>
-              <input type="password" required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none" />
+              <input type="password" required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="كلمة السر" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none" />
             </div>
             <button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-xl text-sm transition shadow-lg">تسجيل الدخول</button>
           </form>
@@ -386,7 +426,7 @@ export default function Admin() {
         <div className="flex items-center justify-between bg-neutral-900 border border-neutral-800 p-4 rounded-2xl">
           <div>
             <h1 className="text-xl font-black text-amber-400">إدارة المتجر</h1>
-            <p className="text-xs text-emerald-400 font-semibold">نظام سحابي معزول (Anti-Race Condition) ✓</p>
+            <p className="text-xs text-emerald-400 font-semibold">حماية سحابية كاملة ومصادقة مشفرة ✓</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {savedMsg && <span className="text-emerald-400 text-xs font-bold animate-pulse">تم الحفظ السحابي بنجاح! ✓</span>}
@@ -402,7 +442,7 @@ export default function Admin() {
             { id: "themes", name: "ثيمات الألوان" },
             { id: "shipping", name: "الشحن والمحافظات" },
             { id: "marketing", name: "التسويق والبكسل" },
-            { id: "settings", name: "حساب الإدارة" },
+            { id: "settings", name: "حساب الإدارة والأمان" },
             { id: "orders", name: `الطلبات السحابية (${orders.length})` }
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${activeTab === tab.id ? "bg-amber-500 text-black shadow-md" : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"}`}>
@@ -502,15 +542,33 @@ export default function Admin() {
 
         {activeTab === "marketing" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وأكواد التتبع</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">رقم واتساب استلام الطلبات</label>
-                <input type="text" value={config.whatsappNumber} onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع الإعلاني</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1 font-bold">رقم واتساب استلام الطلبات</label>
+                  <input type="text" value={config.whatsappNumber} onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })} placeholder="+201000000000" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1 font-bold">رقم واتساب الدعم العائم</label>
+                  <input type="text" value={config.supportWhatsappNumber} onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })} placeholder="+201000000000" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">رقم الدعم العائم</label>
-                <input type="text" value={config.supportWhatsappNumber} onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <h3 className="text-xs font-bold text-neutral-300">أكواد البيكسل (Pixels Tracking)</h3>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Meta Pixel ID (فيسبوك وإنستجرام)</label>
+                  <input type="text" value={config.metaPixelId} onChange={(e) => setConfig({ ...config, metaPixelId: e.target.value })} placeholder="مثال: 123456789012345" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">TikTok Pixel ID</label>
+                  <input type="text" value={config.tiktokPixelId} onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })} placeholder="مثال: C6ABCD1234567890EFGH" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Google Analytics / Ads Tag</label>
+                  <input type="text" value={config.googlePixelId} onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })} placeholder="مثال: G-XXXXXXX أو AW-XXXXXXX" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                </div>
               </div>
             </div>
           </div>
@@ -518,27 +576,65 @@ export default function Admin() {
 
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">حساب المدير</h2>
+            <div className="border-b border-neutral-800 pb-3">
+              <h2 className="font-bold text-base text-amber-400">حساب الإدارة والأمان الخاص بالعميل</h2>
+              <p className="text-xs text-neutral-400 mt-1">يمكن للعميل هنا تغيير بريده الإلكتروني وكلمة مروره ليصبح المتجر ملكه بالكامل ومحمي بـ SHA-256.</p>
+            </div>
+
+            {passMsg && (
+              <div className={`p-3 rounded-xl text-xs font-bold ${passMsg.includes('غير متطابقتين') ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'}`}>
+                {passMsg}
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">البريد الإلكتروني</label>
-                <input type="email" value={config.adminEmail} onChange={(e) => setConfig({ ...config, adminEmail: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                <label className="block text-xs text-neutral-300 mb-1 font-bold">البريد الإلكتروني للوحة التحكم</label>
+                <input 
+                  type="email" 
+                  value={config.adminEmail} 
+                  onChange={(e) => setConfig({ ...config, adminEmail: e.target.value })} 
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
+                />
+                <p className="text-[11px] text-neutral-500 mt-1">هذا هو البريد الذي سيستخدمه العميل لتسجيل الدخول.</p>
               </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">كلمة المرور</label>
-                <input type="password" value={config.adminPassword || ""} onChange={(e) => setConfig({ ...config, adminPassword: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <h3 className="text-xs font-bold text-amber-400">تعيين كلمة مرور جديدة</h3>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">كلمة المرور الجديدة</label>
+                  <input 
+                    type="password" 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    placeholder="اكتب كلمة مرور قوية وجديدة" 
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">تأكيد كلمة المرور الجديدة</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    placeholder="أعد كتابة كلمة المرور للتأكيد" 
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-amber-500" 
+                  />
+                </div>
+                <p className="text-[11px] text-neutral-500">
+                  عند الضغط على "حفظ التعديلات" في الأعلى، سيتم تشفير كلمة المرور وتحديث البريد فوراً في السيرفر، ولن يستطيع أي شخص الدخول بالبيانات القديمة نهائياً.
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* 6. تبويب الطلبات السحابية المتطور بالكامل */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h2 className="font-bold text-base text-amber-400">سجل الطلبات السحابية ({orders.length})</h2>
-                <span className="text-[10px] text-neutral-500">نظام مستقل لكل طلب يمنع أي فقدان للمعلومات</span>
+                <span className="text-[10px] text-neutral-500">نظام مستقل لكل طلب مع دعم الترقيم الآلي (Pagination)</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={exportToCSV} className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
