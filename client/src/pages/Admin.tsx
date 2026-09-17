@@ -234,8 +234,12 @@ export default function Admin() {
       }
     }
 
-    // جلب الطلبات السحابية من مسار /api/orders
-    fetch('/api/orders')
+    // جلب الطلبات السحابية مع التوكن الأمني المحمي
+    fetch('/api/orders', {
+      headers: {
+        'x-admin-token': 'MY_SECURE_ADMIN_TOKEN_2026'
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -297,7 +301,12 @@ export default function Admin() {
   const handleClearOrders = async () => {
     if (confirm("هل أنت متأكد من مسح جميع الطلبات نهائياً من السحابة؟")) {
       try {
-        await fetch('/api/orders', { method: 'DELETE' });
+        await fetch('/api/orders', { 
+          method: 'DELETE',
+          headers: {
+            'x-admin-token': 'MY_SECURE_ADMIN_TOKEN_2026'
+          }
+        });
       } catch (e) {
         console.error(e);
       }
