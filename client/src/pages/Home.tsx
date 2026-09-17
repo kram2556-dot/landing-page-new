@@ -75,7 +75,6 @@ export interface StoreConfig {
   tiktokPixelId: string;
 }
 
-// باليتات الثيمات الستة المنسقة والمتناسقة تماماً مع لوحة التحكم
 const THEME_STYLES: Record<ThemeType, {
   bg: string;
   cardBg: string;
@@ -88,7 +87,6 @@ const THEME_STYLES: Record<ThemeType, {
   inputBorder: string;
   isLight: boolean;
 }> = {
-  // 1. أحذية ورياضة (Street Sneakers): كربوني مطفي مع برتقالي ناري
   sneakers: {
     bg: "#0c0e12",
     cardBg: "#151b24",
@@ -101,7 +99,6 @@ const THEME_STYLES: Record<ThemeType, {
     inputBorder: "#283547",
     isLight: false
   },
-  // 2. عطور وتجميل (Royal Perfume): بنفسجي ليلي ملكي مع ذهب شمبانيا
   perfume: {
     bg: "#0c0714",
     cardBg: "#181024",
@@ -114,7 +111,6 @@ const THEME_STYLES: Record<ThemeType, {
     inputBorder: "#34224c",
     isLight: false
   },
-  // 3. ملابس وأزياء (Fashion Elegance): إسبريسو دافئ مع برونزي توسكاني
   fashion: {
     bg: "#110f0e",
     cardBg: "#1c1814",
@@ -127,7 +123,6 @@ const THEME_STYLES: Record<ThemeType, {
     inputBorder: "#3a3026",
     isLight: false
   },
-  // 4. طبي وعناية (Medical & Clinical): أبيض ناصع نظيف ومقروء مع أزرق ملكي صريح
   medical: {
     bg: "#f8fafc",
     cardBg: "#ffffff",
@@ -140,7 +135,6 @@ const THEME_STYLES: Record<ThemeType, {
     inputBorder: "#cbd5e1",
     isLight: true
   },
-  // 5. أدوات منزلية وإلكترونيات (Home & Tech): كحلي تكنولوجي داكن مع تيتانيوم أزرق
   home: {
     bg: "#0a0f1d",
     cardBg: "#111827",
@@ -153,7 +147,6 @@ const THEME_STYLES: Record<ThemeType, {
     inputBorder: "#24324d",
     isLight: false
   },
-  // 6. ألعاب وهدايا (Kids Joy): رمادي ناعم جداً مريح مع أخضر زمردي مبهج
   kids: {
     bg: "#f4f7f5",
     cardBg: "#ffffff",
@@ -168,7 +161,6 @@ const THEME_STYLES: Record<ThemeType, {
   }
 };
 
-// خريطة كشف الألوان التلقائية للدوائر البصرية
 const COLOR_MAP: Record<string, string> = {
   "أسود": "#111111",
   "اسود": "#111111",
@@ -297,7 +289,6 @@ export default function Home() {
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
-    // خط Cairo العصري الاحترافي والموحد
     const link = document.createElement("link");
     link.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap";
     link.rel = "stylesheet";
@@ -307,7 +298,6 @@ export default function Home() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // التوافق التام مع التسميات القديمة
         let themeKey = parsed.selectedTheme;
         if (themeKey === "royal") themeKey = "perfume";
         if (themeKey === "obsidian") themeKey = "sneakers";
@@ -322,7 +312,6 @@ export default function Home() {
         };
         setConfig(merged);
 
-        // دعم الفاصلتين الإنجليزية والعربية في التفكيك
         if (merged.enableSizes && merged.sizes) {
           const sList = merged.sizes.split(/[,،]+/).map((s: string) => s.trim()).filter(Boolean);
           if (sList.length > 0) setSelectedSize(sList[0]);
@@ -512,18 +501,18 @@ export default function Home() {
 
       <main className="max-w-2xl mx-auto px-4 pt-6 space-y-7">
         
-        {/* عنوان المنتج المباشر مع السعر وزر الشراء السريع (Hero المباشر) */}
-        <div className="text-center space-y-3">
-          <h1 style={{ color: theme.textMain }} className="text-2xl sm:text-3xl font-black leading-tight tracking-tight">
+        {/* عنوان المنتج وسعره المنسق تماماً بدون أي تداخل */}
+        <div className="text-center space-y-4 pt-1">
+          <h1 style={{ color: theme.textMain }} className="text-2xl sm:text-3xl font-black leading-normal px-2 pb-1">
             {config.productTitle}
           </h1>
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-baseline justify-center gap-3" dir="rtl">
             <span style={{ color: theme.accent }} className="text-3xl sm:text-4xl font-black font-sans">
               {config.currentPrice} {activeCountry.currency}
             </span>
             {config.oldPrice > config.currentPrice && (
-              <span style={{ color: theme.textMuted }} className="line-through text-lg opacity-60 font-sans">
+              <span style={{ color: theme.textMuted }} className="line-through text-base sm:text-lg opacity-60 font-sans">
                 {config.oldPrice} {activeCountry.currency}
               </span>
             )}
@@ -652,7 +641,7 @@ export default function Home() {
           </ul>
         </div>
 
-        {/* معرض الصور التوضيحي مع الشرح والتعليقات (المُعاد كاملاً) */}
+        {/* معرض الصور التوضيحي مع الشرح والتعليقات */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <h3 style={{ color: theme.textMain }} className="font-black text-base text-center">تفاصيل المنتج عن قرب:</h3>
@@ -705,7 +694,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* نموذج تأكيد الطلب المحكم (مع تباين نظيف للثيم الفاتح والداكن) */}
+        {/* نموذج تأكيد الطلب */}
         <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
           <div className="text-center space-y-1 border-b pb-4" style={{ borderColor: theme.border }}>
             <h2 style={{ color: theme.textMain }} className="text-xl font-black">أدخل بياناتك لاستلام ومعاينة الطلب</h2>
@@ -855,7 +844,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* قسم تقييمات وآراء العملاء (المُعاد كاملاً) */}
+        {/* قسم تقييمات وآراء العملاء */}
         {config.showReviews && config.reviews && config.reviews.length > 0 && (
           <div className="space-y-3">
             <h3 style={{ color: theme.textMain }} className="font-black text-sm">تجارب وآراء المشترين:</h3>
@@ -874,7 +863,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* إشعار الشراء اللحظي المنبثق */}
+      {/* إشعار الشراء اللحظي */}
       {recentSale && (
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accent }} className="fixed bottom-20 left-4 z-50 border p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs backdrop-blur-xl">
           <div style={{ backgroundColor: `${theme.accent}20`, color: theme.accent }} className="w-8 h-8 rounded-full flex items-center justify-center font-black">
