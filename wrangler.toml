@@ -7,15 +7,12 @@ binding = "DB"
 database_name = "luma-store-db"
 database_id = "8ef5d0f8-90fa-4101-aa66-55c9480a01bc"
 
-
 migrations_dir = "drizzle"
 
 [vars]
 STORE_NAME = "LUMA Studio"
 DEFAULT_LOCALE = "ar"
-[[kv_namespaces]]
-binding = "STORE_KV"
-id = "STORE_KV"
+
 [[kv_namespaces]]
 binding = "STORE_KV"
 id = "9d75939613e24eb9bcd7c97188b07ecd"
