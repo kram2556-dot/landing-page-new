@@ -126,7 +126,7 @@ const THEME_STYLES: Record<ThemeType, {
   medical: {
     bg: "#f8fafc",
     cardBg: "#ffffff",
-    border: "#e2e8f0",
+    border: "#cbd5e1",
     accent: "#0284c7",
     accentText: "#ffffff",
     textMain: "#0f172a",
@@ -289,11 +289,6 @@ export default function Home() {
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
-    const link = document.createElement("link");
-    link.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-
     const saved = localStorage.getItem("store_config");
     if (saved) {
       try {
@@ -431,7 +426,7 @@ export default function Home() {
 
   if (orderSuccess) {
     return (
-      <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
+      <div style={{ backgroundColor: theme.bg, color: theme.textMain }} className="min-h-screen flex items-center justify-center p-4" dir="rtl">
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.border }} className="border p-8 rounded-3xl max-w-sm w-full text-center space-y-5 shadow-2xl">
           <div style={{ backgroundColor: theme.accent, color: theme.accentText }} className="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-lg">
             ✓
@@ -457,7 +452,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ backgroundColor: theme.bg, color: theme.textMain, fontFamily: "'Cairo', sans-serif" }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
+    <div style={{ backgroundColor: theme.bg, color: theme.textMain }} className="min-h-screen pb-28 transition-colors duration-300" dir="rtl">
       
       {/* شريط الإعلان العلوي */}
       {config.showTopBar && (
@@ -499,30 +494,30 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 pt-6 space-y-7">
+      <main className="max-w-2xl mx-auto px-4 pt-4 space-y-6">
         
-        {/* عنوان المنتج وسعره المنسق تماماً بدون أي تداخل */}
-        <div className="text-center space-y-4 pt-1">
-          <h1 style={{ color: theme.textMain }} className="text-2xl sm:text-3xl font-black leading-normal px-2 pb-1">
+        {/* عنوان وسعر المنتج - مرفوع لأعلى بدون أي تداخل وبمسافات مريحة */}
+        <div className="text-center space-y-1.5 pt-0">
+          <h1 style={{ color: theme.textMain }} className="text-xl sm:text-2xl font-black leading-snug px-2 m-0">
             {config.productTitle}
           </h1>
 
-          <div className="flex items-baseline justify-center gap-3" dir="rtl">
-            <span style={{ color: theme.accent }} className="text-3xl sm:text-4xl font-black font-sans">
+          <div className="flex items-center justify-center gap-3 py-1" dir="rtl">
+            <span style={{ color: theme.accent }} className="text-3xl sm:text-4xl font-black">
               {config.currentPrice} {activeCountry.currency}
             </span>
             {config.oldPrice > config.currentPrice && (
-              <span style={{ color: theme.textMuted }} className="line-through text-base sm:text-lg opacity-60 font-sans">
+              <span style={{ color: theme.textMuted }} className="line-through text-base sm:text-lg opacity-60">
                 {config.oldPrice} {activeCountry.currency}
               </span>
             )}
           </div>
 
-          <div className="pt-1">
+          <div className="pt-0.5">
             <button
               onClick={scrollToCheckout}
               style={{ backgroundColor: theme.accent, color: theme.accentText }}
-              className="px-8 py-3 rounded-full text-xs sm:text-sm font-black shadow-xl hover:opacity-95 transition"
+              className="px-8 py-2.5 rounded-full text-xs sm:text-sm font-black shadow-lg hover:opacity-95 transition"
             >
               اطلب الآن — الدفع عند الاستلام بعد المعاينة ←
             </button>
@@ -554,7 +549,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* اختيار المقاسات والألوان بالدوائر البصرية (Color Swatches) */}
+        {/* دوائر الألوان البصرية والمقاسات */}
         {(config.enableSizes || config.enableColors) && (
           <div style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-6 shadow-sm space-y-5">
             
@@ -641,7 +636,7 @@ export default function Home() {
           </ul>
         </div>
 
-        {/* معرض الصور التوضيحي مع الشرح والتعليقات */}
+        {/* معرض الصور التوضيحي مع الشرح */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <h3 style={{ color: theme.textMain }} className="font-black text-base text-center">تفاصيل المنتج عن قرب:</h3>
@@ -694,7 +689,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* نموذج تأكيد الطلب */}
+        {/* نموذج تأكيد الطلب مع تباين نظيف للخانات */}
         <section id="checkout-form" style={{ borderColor: theme.border, backgroundColor: theme.cardBg }} className="border rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
           <div className="text-center space-y-1 border-b pb-4" style={{ borderColor: theme.border }}>
             <h2 style={{ color: theme.textMain }} className="text-xl font-black">أدخل بياناتك لاستلام ومعاينة الطلب</h2>
@@ -844,7 +839,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* قسم تقييمات وآراء العملاء */}
+        {/* قسم تقييمات المشترين */}
         {config.showReviews && config.reviews && config.reviews.length > 0 && (
           <div className="space-y-3">
             <h3 style={{ color: theme.textMain }} className="font-black text-sm">تجارب وآراء المشترين:</h3>
@@ -863,7 +858,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* إشعار الشراء اللحظي */}
+      {/* إشعار الشراء اللحظي المنبثق */}
       {recentSale && (
         <div style={{ backgroundColor: theme.cardBg, borderColor: theme.accent }} className="fixed bottom-20 left-4 z-50 border p-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs backdrop-blur-xl">
           <div style={{ backgroundColor: `${theme.accent}20`, color: theme.accent }} className="w-8 h-8 rounded-full flex items-center justify-center font-black">
@@ -876,7 +871,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* أيقونة واتساب العائمة */}
+      {/* زر واتساب العائم */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
           href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً، أود الاستفسار عن تفاصيل المنتج")}`}
@@ -889,7 +884,7 @@ export default function Home() {
         </a>
       )}
 
-      {/* زر الموبايل العائم بالأسفل */}
+      {/* زر الشراء العائم بأسفل شاشة الموبايل */}
       {config.showStickyButton && (
         <div style={{ backgroundColor: theme.isLight ? "rgba(255,255,255,0.95)" : "rgba(10, 14, 20, 0.95)", borderColor: theme.border }} className="fixed bottom-0 left-0 right-0 p-3.5 backdrop-blur-xl border-t sm:hidden z-40">
           <button
