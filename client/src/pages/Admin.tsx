@@ -172,7 +172,10 @@ const DEFAULT_CONFIG: StoreConfig = {
   enableColors: false,
   colors: "أسود, أبيض",
   showBundles: false,
-  bundles: [],
+  bundles: [
+    { qty: 1, title: "قطعة واحدة", price: 199 },
+    { qty: 2, title: "قطعتان (باقة التوفير)", price: 349, badge: "الأكثر طلباً", savings: "وفر 49" }
+  ],
   showGuarantee: true,
   guaranteeText: "معاينة مجانية كاملة عند باب منزلك قبل السداد",
   guaranteeSubtext: "يحق لك فحص الجودة وتجربة المنتج مع المندوب دون أي التزام",
@@ -198,7 +201,7 @@ const THEMES_LIST = [
 
 export default function Admin() {
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
-  const [activeTab, setActiveTab] = useState<"product" | "themes" | "shipping" | "marketing" | "settings" | "orders">("product");
+  const [activeTab, setActiveTab] = useState<"product" | "marketing_tools" | "themes" | "shipping" | "pixels" | "settings" | "orders">("product");
   const [savedMsg, setSavedMsg] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
@@ -245,6 +248,7 @@ export default function Admin() {
             ...DEFAULT_CONFIG,
             ...cloudData,
             adminPassword: "",
+            gallery: cloudData.gallery || [],
             countries: { ...DEFAULT_COUNTRIES, ...(cloudData.countries || {}) }
           });
         }
@@ -527,10 +531,11 @@ export default function Admin() {
 
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
-            { id: "product", name: "المنتج والعروض" },
+            { id: "product", name: "المنتج والصور" },
+            { id: "marketing_tools", name: "أدوات الترويج والعداد" },
             { id: "themes", name: "ثيمات الألوان" },
-            { id: "shipping", name: "الدول والمحافظات" },
-            { id: "marketing", name: "التسويق و CAPI" },
+            { id: "shipping", name: "الدول والشحن" },
+            { id: "pixels", name: "البيكسل و CAPI" },
             { id: "settings", name: "حساب الإدارة والأمان" },
             { id: "orders", name: `الطلبات السحابية (${orders.length})` }
           ].map((tab) => (
@@ -540,6 +545,7 @@ export default function Admin() {
           ))}
         </div>
 
+        {/* تبويب المنتج والصور والمعرض */}
         {activeTab === "product" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">بيانات المنتج وتفاصيل العرض</h2>
@@ -558,43 +564,199 @@ export default function Admin() {
                   <input type="number" value={config.currentPrice} onChange={(e) => setConfig({ ...config, currentPrice: Number(e.target.value) })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm font-bold text-amber-400" />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">السعر القديم</label>
+                  <label className="block text-xs text-neutral-400 mb-1">السعر القديم المشطوب</label>
                   <input type="number" value={config.oldPrice} onChange={(e) => setConfig({ ...config, oldPrice: Number(e.target.value) })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm" />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">صورة المنتج</label>
-                <div className="flex gap-2">
-                  <input type="text" value={config.productImage} onChange={(e) => setConfig({ ...config, productImage: e.target.value })} className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs" />
-                  <label className="bg-neutral-800 hover:bg-neutral-700 px-4 py-3 rounded-xl text-xs font-bold cursor-pointer transition">
-                    رفع صورة
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) compressAndSetImage(f, (b) => setConfig({ ...config, productImage: b })); }} />
-                  </label>
+
+              {/* الصورة الرئيسية */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                <label className="block text-xs text-neutral-300 font-bold">صورة المنتج الرئيسية</label>
+                <div className="flex items-center gap-3">
+                  {config.productImage && (
+                    <img src={config.productImage} alt="Main Preview" className="w-14 h-14 rounded-xl object-cover border border-neutral-800 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 flex gap-2">
+                    <input type="text" value={config.productImage} onChange={(e) => setConfig({ ...config, productImage: e.target.value })} placeholder="رابط الصورة أو ارفع من جهازك" className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs" />
+                    <label className="bg-neutral-800 hover:bg-neutral-700 px-4 py-3 rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center flex-shrink-0">
+                      رفع صورة
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) compressAndSetImage(f, (b) => setConfig({ ...config, productImage: b })); }} />
+                    </label>
+                  </div>
                 </div>
               </div>
+
+              {/* معرض الصور الإضافية (حتى 8 صور) */}
+              <div className="space-y-3 border-t border-neutral-800 pt-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="block text-xs text-amber-400 font-bold">معرض الصور الإضافية (Gallery)</label>
+                    <span className="text-[10px] text-neutral-500">تقليب زوايا وتفاصيل المنتج (حتى 8 صور)</span>
+                  </div>
+                  {(!config.gallery || config.gallery.length < 8) && (
+                    <label className="bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition">
+                      + إضافة صورة للمعرض
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => { 
+                          const f = e.target.files?.[0]; 
+                          if (f) {
+                            compressAndSetImage(f, (b) => {
+                              const newGalleryItem = { id: `img_${Date.now()}`, image: b, caption: "" };
+                              setConfig({ ...config, gallery: [...(config.gallery || []), newGalleryItem] });
+                            });
+                          }
+                        }} 
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {config.gallery && config.gallery.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {config.gallery.map((item, idx) => (
+                      <div key={item.id || idx} className="relative bg-neutral-950 border border-neutral-800 rounded-xl p-2 flex flex-col items-center gap-2">
+                        <img src={item.image} alt={`Gallery ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-neutral-800" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = config.gallery.filter((_, i) => i !== idx);
+                            setConfig({ ...config, gallery: updated });
+                          }}
+                          className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[11px] font-bold py-1 rounded-lg border border-red-500/20 transition"
+                        >
+                          حذف ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-neutral-950/60 border border-dashed border-neutral-800 p-4 rounded-xl text-center">
+                    <p className="text-xs text-neutral-500">لا توجد صور إضافية في المعرض حالياً (يتم عرض الصورة الرئيسية فقط).</p>
+                  </div>
+                )}
+              </div>
+
+              {/* المقاسات والألوان */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold">المقاسات</label>
+                    <label className="text-xs font-bold">تفعيل خيارات المقاسات</label>
                     <input type="checkbox" checked={config.enableSizes} onChange={(e) => setConfig({ ...config, enableSizes: e.target.checked })} className="w-4 h-4 accent-amber-500" />
                   </div>
-                  <input type="text" value={config.sizes} onChange={(e) => setConfig({ ...config, sizes: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs" />
+                  <input type="text" disabled={!config.enableSizes} value={config.sizes} onChange={(e) => setConfig({ ...config, sizes: e.target.value })} placeholder="41, 42, 43, 44" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs disabled:opacity-40" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold">الألوان</label>
+                    <label className="text-xs font-bold">تفعيل خيارات الألوان</label>
                     <input type="checkbox" checked={config.enableColors} onChange={(e) => setConfig({ ...config, enableColors: e.target.checked })} className="w-4 h-4 accent-amber-500" />
                   </div>
-                  <input type="text" value={config.colors} onChange={(e) => setConfig({ ...config, colors: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs" />
+                  <input type="text" disabled={!config.enableColors} value={config.colors} onChange={(e) => setConfig({ ...config, colors: e.target.value })} placeholder="أسود, أبيض, رمادي" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs disabled:opacity-40" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* تبويب أدوات الترويج والعداد والعروض (اختياري بالكامل) */}
+        {activeTab === "marketing_tools" && (
+          <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
+            <h2 className="font-bold text-base text-amber-400">التحكم في عناصر التحفيز (إظهار / إخفاء)</h2>
+
+            {/* العداد التنازلي وشريط المخزون */}
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">عداد التنازل (العد التنازلي الوهمي)</label>
+                  <span className="text-[10px] text-neutral-400">إظهار مؤقت انتهاء العرض لإضفاء طابع الاستعجال</span>
+                </div>
+                <input type="checkbox" checked={config.showTimer} onChange={(e) => setConfig({ ...config, showTimer: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+              {config.showTimer && (
+                <div>
+                  <label className="block text-[11px] text-neutral-400 mb-1">مدة العداد بالدقائق</label>
+                  <input type="number" value={config.timerMinutes} onChange={(e) => setConfig({ ...config, timerMinutes: Number(e.target.value) })} className="w-32 bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs text-amber-400 font-bold" />
+                </div>
+              )}
+
+              <div className="border-t border-neutral-800/80 pt-3 flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">شريط المخزون المتبقي</label>
+                  <span className="text-[10px] text-neutral-400">إظهار كمية متبقية قليلة في المستودع</span>
+                </div>
+                <input type="checkbox" checked={config.showStockBar} onChange={(e) => setConfig({ ...config, showStockBar: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+              {config.showStockBar && (
+                <div>
+                  <label className="block text-[11px] text-neutral-400 mb-1">العدد المتبقي في المخزون</label>
+                  <input type="number" value={config.stockLeft} onChange={(e) => setConfig({ ...config, stockLeft: Number(e.target.value) })} className="w-32 bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs text-amber-400 font-bold" />
+                </div>
+              )}
+            </div>
+
+            {/* باقات العروض (Bundles) */}
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">باقات العروض والكميات (قطعة، قطعتين، 3 قطع)</label>
+                  <span className="text-[10px] text-neutral-400">إذا عطلتها، سيشتري العميل بالقطعة الواحدة بالسعر الأساسي</span>
+                </div>
+                <input type="checkbox" checked={config.showBundles} onChange={(e) => setConfig({ ...config, showBundles: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+            </div>
+
+            {/* الشحن المجاني والمعاينة */}
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">شارة المعاينة / الضمان على الصورة</label>
+                  <span className="text-[10px] text-neutral-400">تظهر أعلى صورة المنتج الرئيسية</span>
+                </div>
+                <input type="checkbox" checked={config.showBadge} onChange={(e) => setConfig({ ...config, showBadge: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+              {config.showBadge && (
+                <input type="text" value={config.badgeText} onChange={(e) => setConfig({ ...config, badgeText: e.target.value })} placeholder="معاينة مجانية للمنتج قبل الدفع" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs" />
+              )}
+
+              <div className="border-t border-neutral-800/80 pt-3 flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">صندوق تفاصيل الضمان والمعاينة قبل الاستلام</label>
+                  <span className="text-[10px] text-neutral-400">قسم إيضاح حق فحص المنتج قبل دفع المبلغ للمندوب</span>
+                </div>
+                <input type="checkbox" checked={config.showGuarantee} onChange={(e) => setConfig({ ...config, showGuarantee: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+            </div>
+
+            {/* الشريط العلوي وإشعارات الشراء اللحظية */}
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">الشريط الإعلاني العلوي (Top Bar)</label>
+                  <span className="text-[10px] text-neutral-400">شريط العروض في أعلى المتجر</span>
+                </div>
+                <input type="checkbox" checked={config.showTopBar} onChange={(e) => setConfig({ ...config, showTopBar: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+              {config.showTopBar && (
+                <input type="text" value={config.topBarText} onChange={(e) => setConfig({ ...config, topBarText: e.target.value })} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs" />
+              )}
+
+              <div className="border-t border-neutral-800/80 pt-3 flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">إشعارات الشراء اللحظية (Recent Sales Toast)</label>
+                  <span className="text-[10px] text-neutral-400">إشعار ينبثق كل بضع ثوانٍ: (اشترى فلان من القاهرة الآن)</span>
+                </div>
+                <input type="checkbox" checked={config.showRecentSales} onChange={(e) => setConfig({ ...config, showRecentSales: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* تبويب الثيمات */}
         {activeTab === "themes" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">ثيمات المتجر</h2>
+            <h2 className="font-bold text-base text-amber-400">ثيمات ألوان المتجر</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {THEMES_LIST.map((th) => (
                 <div key={th.id} onClick={() => setConfig({ ...config, selectedTheme: th.id })} className={`cursor-pointer p-4 rounded-xl border-2 transition flex items-center justify-between ${config.selectedTheme === th.id ? "border-amber-400 bg-amber-500/10" : "border-neutral-800 bg-neutral-950"}`}>
@@ -609,6 +771,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* تبويب الشحن والمحافظات (مع تحديد الشحن المجاني أو تسعيره) */}
         {activeTab === "shipping" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-4 space-y-3">
@@ -637,60 +800,28 @@ export default function Admin() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
                   <label className="block text-[10px] text-neutral-400 mb-1">اسم الدولة</label>
-                  <input
-                    type="text"
-                    value={newCountryName}
-                    onChange={(e) => setNewCountryName(e.target.value)}
-                    placeholder="مثال: الكويت"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
-                  />
+                  <input type="text" value={newCountryName} onChange={(e) => setNewCountryName(e.target.value)} placeholder="الكويت" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs" />
                 </div>
                 <div>
                   <label className="block text-[10px] text-neutral-400 mb-1">رمز الدولة</label>
-                  <input
-                    type="text"
-                    value={newCountryCode}
-                    onChange={(e) => setNewCountryCode(e.target.value)}
-                    placeholder="KW"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs uppercase"
-                  />
+                  <input type="text" value={newCountryCode} onChange={(e) => setNewCountryCode(e.target.value)} placeholder="KW" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs uppercase" />
                 </div>
                 <div>
                   <label className="block text-[10px] text-neutral-400 mb-1">العملة</label>
-                  <input
-                    type="text"
-                    value={newCountryCurrency}
-                    onChange={(e) => setNewCountryCurrency(e.target.value)}
-                    placeholder="د.ك"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
-                  />
+                  <input type="text" value={newCountryCurrency} onChange={(e) => setNewCountryCurrency(e.target.value)} placeholder="د.ك" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs" />
                 </div>
                 <div>
                   <label className="block text-[10px] text-neutral-400 mb-1">كود الاتصال</label>
-                  <input
-                    type="text"
-                    value={newCountryPhoneCode}
-                    onChange={(e) => setNewCountryPhoneCode(e.target.value)}
-                    placeholder="+965"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs"
-                  />
+                  <input type="text" value={newCountryPhoneCode} onChange={(e) => setNewCountryPhoneCode(e.target.value)} placeholder="+965" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2 text-xs" />
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleAddCountry}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 rounded-xl text-xs transition"
-              >
-                + حفظ وإضافة الدولة
-              </button>
+              <button type="button" onClick={handleAddCountry} className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 rounded-xl text-xs transition">+ حفظ وإضافة الدولة</button>
             </div>
 
             <div className="space-y-3 border-t border-neutral-800 pt-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-neutral-200">
-                  محافظات ومدن دولة ({activeCountryData.name})
-                </span>
-                <span className="text-xs text-amber-400 font-bold">العملة: {activeCountryData.currency}</span>
+                <span className="text-xs font-bold text-neutral-200">محافظات ومدن دولة ({activeCountryData.name})</span>
+                <span className="text-xs text-amber-400 font-bold">ضع 0 للشحن المجاني</span>
               </div>
 
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -733,6 +864,7 @@ export default function Admin() {
                         className="w-20 bg-neutral-900 border border-neutral-800 rounded-lg p-1.5 text-center font-bold text-amber-400" 
                       />
                       <span className="text-neutral-500">{activeCountryData.currency}</span>
+                      {prov.shippingCost === 0 && <span className="text-[10px] text-emerald-400 font-bold">(مجاني)</span>}
                     </div>
                   </div>
                 ))}
@@ -749,10 +881,10 @@ export default function Admin() {
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    placeholder="سعر الشحن"
+                    placeholder="سعر الشحن (0 للمجاني)"
                     value={newProvinceCost || ""}
                     onChange={(e) => setNewProvinceCost(Number(e.target.value))}
-                    className="w-28 bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-center font-bold text-amber-400"
+                    className="w-32 bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-center font-bold text-amber-400"
                   />
                   <button
                     type="button"
@@ -767,18 +899,22 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === "marketing" && (
+        {/* تبويب الواتساب والبيكسل و CAPI */}
+        {activeTab === "pixels" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع (مع دعم CAPI)</h2>
+            <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع (CAPI)</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1 font-bold">رقم واتساب استلام الطلبات</label>
                   <input type="text" value={config.whatsappNumber} onChange={(e) => setConfig({ ...config, whatsappNumber: e.target.value })} placeholder="+201000000000" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
                 </div>
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1 font-bold">رقم واتساب الدعم العائم</label>
-                  <input type="text" value={config.supportWhatsappNumber} onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })} placeholder="+201000000000" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-neutral-400 font-bold">زر واتساب الدعم الفني العائم</label>
+                    <input type="checkbox" checked={config.showSupportWhatsapp} onChange={(e) => setConfig({ ...config, showSupportWhatsapp: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+                  </div>
+                  <input type="text" disabled={!config.showSupportWhatsapp} value={config.supportWhatsappNumber} onChange={(e) => setConfig({ ...config, supportWhatsappNumber: e.target.value })} placeholder="+201000000000" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono disabled:opacity-40" />
                 </div>
               </div>
 
@@ -793,28 +929,28 @@ export default function Admin() {
                   <div>
                     <label className="block text-xs text-emerald-400 mb-1 font-bold">Meta CAPI Access Token (تتبع السيرفر المباشر ⚡)</label>
                     <input type="password" value={config.metaAccessToken} onChange={(e) => setConfig({ ...config, metaAccessToken: e.target.value })} placeholder="EAAB... (رمز الوصول من مدير أحداث فيسبوك)" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs font-mono text-white" />
-                    <p className="text-[10px] text-neutral-500 mt-1">رمز محمي ومخفي عن الزوار العاديين، ويُرسل فورياً من خادم Cloudflare إلى فيسبوك عند كل طلب.</p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">TikTok Pixel ID</label>
-                  <input type="text" value={config.tiktokPixelId} onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })} placeholder="مثال: C6ABCD1234567890EFGH" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                  <input type="text" value={config.tiktokPixelId} onChange={(e) => setConfig({ ...config, tiktokPixelId: e.target.value })} placeholder="C6ABCD1234567890EFGH" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
                 </div>
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">Google Analytics / Ads Tag</label>
-                  <input type="text" value={config.googlePixelId} onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })} placeholder="مثال: G-XXXXXXX أو AW-XXXXXXX" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
+                  <input type="text" value={config.googlePixelId} onChange={(e) => setConfig({ ...config, googlePixelId: e.target.value })} placeholder="G-XXXXXXX أو AW-XXXXXXX" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs font-mono" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* تبويب حساب الإدارة والأمان */}
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-3">
               <h2 className="font-bold text-base text-amber-400">حساب الإدارة والأمان</h2>
-              <p className="text-xs text-neutral-400 mt-1">تشفير قياسي بـ PBKDF2 مع إبطال فوري لكافة الجلسات القديمة عند تغيير كلمة السر.</p>
+              <p className="text-xs text-neutral-400 mt-1">تشفير قياسي بـ PBKDF2 مع إبطال فوري للجلسات السابقة عند تغيير كلمة المرور.</p>
             </div>
 
             {passMsg && (
@@ -861,12 +997,13 @@ export default function Admin() {
           </div>
         )}
 
+        {/* تبويب الطلبات السحابية */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h2 className="font-bold text-base text-amber-400">سجل الطلبات السحابية ({orders.length})</h2>
-                <span className="text-[10px] text-neutral-500">نظام مستقل لكل طلب مع دعم الترقيم الآلي (Pagination)</span>
+                <span className="text-[10px] text-neutral-500">نظام مستقل لكل طلب مع دعم الترقيم الآلي</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={exportToCSV} className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
