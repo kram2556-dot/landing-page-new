@@ -1,8 +1,32 @@
-async function hashPassword(text: string): Promise<string> {
-  const msgUint8 = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+// تشفير كلمة السر بـ PBKDF2 مع توليد Salt عشوائي 16 بايت
+async function hashPBKDF2(password: string): Promise<string> {
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+
+  const derivedKey = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    256
+  );
+
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+  const keyHex = Array.from(new Uint8Array(derivedKey)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+  return `${saltHex}:${keyHex}`;
 }
 
 export async function onRequestGet(context: any) {
@@ -10,7 +34,6 @@ export async function onRequestGet(context: any) {
     const raw = await context.env.STORE_KV.get("STORE_CONFIG");
     let data = raw ? JSON.parse(raw) : {};
 
-    // حذف أي أثر للباسورد قبل إرسال البيانات للمتصفح
     delete data.adminPassword;
     delete data.adminPasswordHash;
 
@@ -38,9 +61,8 @@ export async function onRequestPost(context: any) {
     const existingRaw = await context.env.STORE_KV.get("STORE_CONFIG");
     const existing = existingRaw ? JSON.parse(existingRaw) : {};
 
-    // تشفير كلمة السر في KV إذا أدخل كلمة جديدة
     if (newData.adminPassword && newData.adminPassword.trim() !== "") {
-      newData.adminPasswordHash = await hashPassword(newData.adminPassword);
+      newData.adminPasswordHash = await hashPBKDF2(newData.adminPassword);
     } else {
       newData.adminPasswordHash = existing.adminPasswordHash;
     }
