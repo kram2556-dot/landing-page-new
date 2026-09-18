@@ -1,9 +1,12 @@
-export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (context) => {
+interface Env {
+  STORE_KV: KVNamespace;
+}
+
+export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
   const url = new URL(request.url);
   const origin = request.headers.get("Origin") || "";
 
-  // حماية CORS: السماح فقط بنفس النطاق أو النطاقات المصرح لها
   const corsHeaders: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
@@ -27,7 +30,7 @@ export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (contex
 
     const storeData = JSON.parse(rawData);
 
-    // التحقق هل الطالب هو الأدمن؟
+    // التحقق هل الطالب أدمن مسجل دخوله؟
     const adminToken = request.headers.get("x-admin-token");
     let isAuthed = false;
     if (adminToken) {
@@ -35,12 +38,12 @@ export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (contex
       if (session) isAuthed = true;
     }
 
-    // إذا لم يكن أدمن مسجل، احذف البيانات الحساسة فوراً!
+    // إذا لم يكن أدمن مسجل، احذف البيانات الحساسة فوراً من الرد العام
     if (!isAuthed) {
       delete storeData.adminEmail;
       delete storeData.adminPassword;
       delete storeData.adminPasswordHash;
-      delete storeData.metaAccessToken; // حماية توكن الفيسبوك السري
+      delete storeData.metaAccessToken;
     }
 
     return new Response(JSON.stringify(storeData), {
@@ -48,7 +51,7 @@ export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (contex
     });
   }
 
-  // 2. طلب تعديل الإعدادات (POST) - يتطلب صلاحيات أدمن مؤكدة
+  // 2. طلب تعديل الإعدادات (POST)
   if (request.method === "POST") {
     const adminToken = request.headers.get("x-admin-token");
     if (!adminToken) {
@@ -66,7 +69,7 @@ export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (contex
       });
     }
 
-    const incomingData = await request.json() as Record<string, any>;
+    const incomingData = (await request.json()) as Record<string, any>;
     const rawExisting = await env.STORE_KV.get("STORE_CONFIG");
     const existingData = rawExisting ? JSON.parse(rawExisting) : {};
 
@@ -96,19 +99,17 @@ export const onRequest: PagesFunction<{ STORE_KV: KVNamespace }> = async (contex
       const rawHash = await crypto.subtle.exportKey("raw", hash);
       const hashArray = Array.from(new Uint8Array(rawHash));
       const saltArray = Array.from(salt);
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-      const saltHex = saltArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+      const saltHex = saltArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
       incomingData.adminPasswordHash = `${saltHex}:${hashHex}`;
-      delete incomingData.adminPassword; // مسح النص الصريح
+      delete incomingData.adminPassword;
     } else {
-      // الحفاظ على الهاش الحالي لو لم تتغير كلمة السر
       if (existingData.adminPasswordHash) {
         incomingData.adminPasswordHash = existingData.adminPasswordHash;
       }
     }
 
-    // دمج وحفظ البيانات
     const merged = { ...existingData, ...incomingData };
     await env.STORE_KV.put("STORE_CONFIG", JSON.stringify(merged));
 
