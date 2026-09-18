@@ -362,6 +362,26 @@ export default function Home() {
   };
 
   if (orderSuccess) {
+    const waNumber = (config.whatsappNumber || "").replace(/[^0-9]/g, "");
+    const messageLines = [
+      `*طلب شراء جديد 🛍️*`,
+      `--------------------------`,
+      `*رقم الطلب:* ${orderSuccess.id}`,
+      `*الاسم:* ${orderSuccess.fullName}`,
+      `*الهاتف:* ${orderSuccess.phone}${orderSuccess.altPhone ? ` (بديل: ${orderSuccess.altPhone})` : ""}`,
+      `*المنتج:* ${config.productTitle}`,
+      `*الكمية:* ${orderSuccess.qty}`,
+      orderSuccess.selectedSize ? `*المقاس:* ${orderSuccess.selectedSize}` : null,
+      orderSuccess.selectedColor ? `*اللون:* ${orderSuccess.selectedColor}` : null,
+      `*المحافظة:* ${orderSuccess.governorate}`,
+      `*العنوان:* ${orderSuccess.address}`,
+      orderSuccess.notes ? `*ملاحظات:* ${orderSuccess.notes}` : null,
+      `--------------------------`,
+      `*الإجمالي المطلوب عند الاستلام:* ${orderSuccess.total} ${orderSuccess.currency}`,
+      `--------------------------`,
+      `أرجو تأكيد تجهيز الشحنة وموعد التوصيل.`
+    ].filter(Boolean).join("\n");
+
     return (
       <div className={`min-h-screen ${theme.bg} text-white flex items-center justify-center p-4 font-sans`} dir="rtl">
         <div className={`${theme.cardBg} border border-emerald-500/30 p-8 rounded-3xl max-w-md w-full text-center space-y-5 shadow-2xl`}>
@@ -379,12 +399,12 @@ export default function Home() {
             <p>الإجمالي المطلوب: <span className={`${theme.primaryText} font-bold`}>{orderSuccess.total} {orderSuccess.currency}</span></p>
           </div>
           <a
-            href={`https://wa.me/${config.whatsappNumber?.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`مرحباً، أود الاستفسار عن طلبي رقم: ${orderSuccess.id}`)}`}
+            href={`https://wa.me/${waNumber}?text=${encodeURIComponent(messageLines)}`}
             target="_blank"
             rel="noreferrer"
-            className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-sm transition"
+            className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-sm transition shadow-lg"
           >
-            متابعة الطلب عبر واتساب ↗
+            تأكيد ومتابعة تفاصيل الطلب عبر واتساب ↗
           </a>
         </div>
       </div>
