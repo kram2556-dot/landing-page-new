@@ -80,6 +80,12 @@ export interface StoreConfig {
   metaAccessToken: string;
   tiktokPixelId: string;
   googlePixelId: string;
+  // إعدادات كود الخصم عند الخروج (Exit Intent)
+  enableExitPopup?: boolean;
+  exitPopupTitle?: string;
+  exitPopupText?: string;
+  exitCouponCode?: string;
+  exitCouponDiscountPercent?: number;
 }
 
 const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
@@ -187,7 +193,12 @@ const DEFAULT_CONFIG: StoreConfig = {
   metaPixelId: "",
   metaAccessToken: "",
   tiktokPixelId: "",
-  googlePixelId: ""
+  googlePixelId: "",
+  enableExitPopup: true,
+  exitPopupTitle: "انتظر! لا تفوت هذا العرض الخاص 🎁",
+  exitPopupText: "احصل على خصم إضافي خاص بك الآن قبل المغادرة!",
+  exitCouponCode: "SPECIAL10",
+  exitCouponDiscountPercent: 10
 };
 
 const THEMES_LIST = [
@@ -429,7 +440,7 @@ export default function Admin() {
 
   const exportToCSV = () => {
     if (orders.length === 0) return alert("لا توجد طلبات لتصديرها");
-    const headers = ["معرف الطلب", "التاريخ", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "المقاس", "اللون", "الإجمالي", "الحالة"];
+    const headers = ["معرف الطلب", "التاريخ", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "تفاصيل المقاسات والألوان", "الإجمالي", "الحالة"];
     const rows = orders.map((o) => [
       o.id,
       new Date(o.createdAt || o.date).toLocaleString("ar-EG"),
@@ -438,8 +449,7 @@ export default function Admin() {
       `"${o.governorate || ""}"`,
       `"${(o.address || "").replace(/"/g, '""')}"`,
       o.qty || 1,
-      o.selectedSize || "-",
-      o.selectedColor || "-",
+      `"${o.itemsBreakdown || `${o.selectedSize || "-"} / ${o.selectedColor || "-"}`}"`,
       `${o.total} ${o.currency}`,
       o.status || "جديد"
     ]);
@@ -532,7 +542,7 @@ export default function Admin() {
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
             { id: "product", name: "المنتج والصور" },
-            { id: "marketing_tools", name: "أدوات الترويج والعداد" },
+            { id: "marketing_tools", name: "أدوات الترويج والخصم" },
             { id: "themes", name: "ثيمات الألوان" },
             { id: "shipping", name: "الدول والشحن" },
             { id: "pixels", name: "البيكسل و CAPI" },
@@ -660,16 +670,77 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب أدوات الترويج والعداد والعروض (اختياري بالكامل) */}
+        {/* تبويب أدوات الترويج والعداد وكوبون الخصم عند الخروج */}
         {activeTab === "marketing_tools" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">التحكم في عناصر التحفيز (إظهار / إخفاء)</h2>
+            <h2 className="font-bold text-base text-amber-400">التحكم في عناصر التحفيز ونوافذ الخصم</h2>
+
+            {/* نافذة الخصم عند الخروج (Exit-Intent Popup) */}
+            <div className="bg-neutral-950 border border-amber-500/30 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-amber-400 block">نافذة كود الخصم عند محاولة الخروج (Exit-Intent)</label>
+                  <span className="text-[10px] text-neutral-400">تظهر للعميل المتردد عند محاولة مغادرة الصفحة لإنقاذ عملية البيع</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={config.enableExitPopup ?? true} 
+                  onChange={(e) => setConfig({ ...config, enableExitPopup: e.target.checked })} 
+                  className="w-4 h-4 accent-amber-500" 
+                />
+              </div>
+
+              {(config.enableExitPopup ?? true) && (
+                <div className="space-y-3 pt-2 border-t border-neutral-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">كود الخصم</label>
+                      <input 
+                        type="text" 
+                        value={config.exitCouponCode || "SPECIAL10"} 
+                        onChange={(e) => setConfig({ ...config, exitCouponCode: e.target.value.toUpperCase().trim() })} 
+                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs font-mono font-bold text-amber-400" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-neutral-400 mb-1">نسبة الخصم (%)</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="90" 
+                        value={config.exitCouponDiscountPercent || 10} 
+                        onChange={(e) => setConfig({ ...config, exitCouponDiscountPercent: Number(e.target.value) })} 
+                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs font-mono font-bold text-emerald-400" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-neutral-400 mb-1">عنوان النافذة الترحيبية</label>
+                    <input 
+                      type="text" 
+                      value={config.exitPopupTitle || "انتظر! لا تفوت هذا العرض الخاص 🎁"} 
+                      onChange={(e) => setConfig({ ...config, exitPopupTitle: e.target.value })} 
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-white font-bold" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-neutral-400 mb-1">نص العرض الترويجي</label>
+                    <input 
+                      type="text" 
+                      value={config.exitPopupText || "احصل على خصم إضافي خاص بك الآن قبل المغادرة!"} 
+                      onChange={(e) => setConfig({ ...config, exitPopupText: e.target.value })} 
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-2.5 text-xs text-white" 
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* العداد التنازلي وشريط المخزون */}
             <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-xs font-bold text-white block">عداد التنازل (العد التنازلي الوهمي)</label>
+                  <label className="text-xs font-bold text-white block">عداد التنازل (العد التنازلي)</label>
                   <span className="text-[10px] text-neutral-400">إظهار مؤقت انتهاء العرض لإضفاء طابع الاستعجال</span>
                 </div>
                 <input type="checkbox" checked={config.showTimer} onChange={(e) => setConfig({ ...config, showTimer: e.target.checked })} className="w-4 h-4 accent-amber-500" />
@@ -701,7 +772,7 @@ export default function Admin() {
               <div className="flex items-center justify-between">
                 <div>
                   <label className="text-xs font-bold text-white block">باقات العروض والكميات (قطعة، قطعتين، 3 قطع)</label>
-                  <span className="text-[10px] text-neutral-400">إذا عطلتها، سيشتري العميل بالقطعة الواحدة بالسعر الأساسي</span>
+                  <span className="text-[10px] text-neutral-400">إذا عطلتها، سيتحكم العميل بالكمية عبر عداد (+ / -) بالسعر الأساسي</span>
                 </div>
                 <input type="checkbox" checked={config.showBundles} onChange={(e) => setConfig({ ...config, showBundles: e.target.checked })} className="w-4 h-4 accent-amber-500" />
               </div>
@@ -771,7 +842,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب الشحن والمحافظات (مع تحديد الشحن المجاني أو تسعيره) */}
+        {/* تبويب الشحن والمحافظات */}
         {activeTab === "shipping" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-4 space-y-3">
@@ -1003,7 +1074,7 @@ export default function Admin() {
             <div className="flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h2 className="font-bold text-base text-amber-400">سجل الطلبات السحابية ({orders.length})</h2>
-                <span className="text-[10px] text-neutral-500">نظام مستقل لكل طلب مع دعم الترقيم الآلي</span>
+                <span className="text-[10px] text-neutral-500">تفصيل كامل للمقاسات والألوان المتعددة مع دعم الترقيم الآلي</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={exportToCSV} className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
@@ -1055,15 +1126,31 @@ export default function Admin() {
                       </a>
                     </div>
                     <p className="text-neutral-400">العنوان: {ord.governorate} — {ord.address}</p>
-                    <div className="flex flex-wrap gap-4 text-neutral-400 text-[11px]">
-                      <span>الكمية: {ord.qty || 1}</span>
-                      {ord.selectedSize && <span>المقاس: {ord.selectedSize}</span>}
-                      {ord.selectedColor && <span>اللون: {ord.selectedColor}</span>}
-                      <span className="text-neutral-500">
-                        {new Date(ord.createdAt || ord.date).toLocaleString("ar-EG")}
-                      </span>
+                    
+                    {/* عرض تفاصيل القطع والمقاسات والألوان */}
+                    <div className="bg-neutral-900/70 p-2.5 rounded-lg border border-neutral-800/80 space-y-1">
+                      <div className="text-amber-400 font-bold text-[11px]">الكمية المطلوبة: {ord.qty || 1}</div>
+                      {ord.itemsBreakdown ? (
+                        <div className="text-neutral-300 text-[11px] whitespace-pre-line leading-relaxed font-mono">
+                          {ord.itemsBreakdown}
+                        </div>
+                      ) : (
+                        <div className="flex gap-4 text-neutral-400 text-[11px]">
+                          {ord.selectedSize && <span>المقاس: {ord.selectedSize}</span>}
+                          {ord.selectedColor && <span>اللون: {ord.selectedColor}</span>}
+                        </div>
+                      )}
+                      {ord.appliedDiscount > 0 && (
+                        <div className="text-emerald-400 text-[10px] font-bold">
+                          تم تطبيق كوبون خصم: {ord.appliedCoupon} (خصم {ord.appliedDiscount}%)
+                        </div>
+                      )}
                     </div>
-                    {ord.notes && <p className="text-neutral-500 italic bg-neutral-900/50 p-2 rounded">ملاحظة: {ord.notes}</p>}
+
+                    <div className="flex justify-between items-center text-neutral-500 text-[10px] pt-1">
+                      <span>{new Date(ord.createdAt || ord.date).toLocaleString("ar-EG")}</span>
+                      {ord.notes && <span className="italic text-neutral-400">ملاحظة: {ord.notes}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
