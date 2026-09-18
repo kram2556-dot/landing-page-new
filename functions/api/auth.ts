@@ -2,13 +2,11 @@ interface Env {
   STORE_KV: KVNamespace;
 }
 
-// دالة مساعدة لتشفير كلمة المرور والتحقق منها باستخدام PBKDF2
 async function verifyPassword(password: string, hashWithSalt: string): Promise<boolean> {
   const parts = hashWithSalt.split(":");
   if (parts.length !== 2) return false;
   const [saltHex, originalHashHex] = parts;
 
-  // تحويل Salt من Hex إلى Uint8Array
   const salt = new Uint8Array(
     saltHex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
   );
@@ -43,7 +41,6 @@ async function verifyPassword(password: string, hashWithSalt: string): Promise<b
   return hashHex === originalHashHex;
 }
 
-// دالة مساعدة لتشفير كلمة مرور جديدة وتخزينها بصيغة PBKDF2
 async function hashNewPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const enc = new TextEncoder();
@@ -84,7 +81,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(request.url);
   const origin = request.headers.get("Origin") || "";
 
-  // إعداد ترويسات CORS بنطاق محدد
   const corsHeaders: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
@@ -101,7 +97,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
-  // 1. فحص الحماية ضد التخمين (Rate Limiting per IP)
+  // فحص الحماية ضد التخمين (5 محاولات فاشلة = إيقاف 5 دقائق)
   const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
   const rateLimitKey = `rate_limit:auth:${clientIP}`;
   const rawAttempts = await env.STORE_KV.get(rateLimitKey);
@@ -130,24 +126,19 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       );
     }
 
-    // 2. جلب بيانات المتجر المخزنة
     const rawStore = await env.STORE_KV.get("STORE_CONFIG");
     const storeConfig = rawStore ? JSON.parse(rawStore) : {};
 
     const configuredEmail = storeConfig.adminEmail || "admin@example.com";
     let isPasswordCorrect = false;
 
-    // 3. التحقق من تطابق البريد الإلكتروني
     if (email.trim().toLowerCase() === configuredEmail.trim().toLowerCase()) {
       if (storeConfig.adminPasswordHash) {
-        // التحقق باستخدام هاش PBKDF2
         isPasswordCorrect = await verifyPassword(password, storeConfig.adminPasswordHash);
       } else {
-        // دعم الترقية التلقائية من كلمة المرور الافتراضية
         const currentPlain = storeConfig.adminPassword || "admin";
         if (password === currentPlain) {
           isPasswordCorrect = true;
-          // ترقية فورية وتشفير الكلمة إلى PBKDF2
           const newHash = await hashNewPassword(password);
           storeConfig.adminPasswordHash = newHash;
           delete storeConfig.adminPassword;
@@ -156,7 +147,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // 4. في حالة فشل التحقق (تسجيل محاولة فاشلة)
     if (!isPasswordCorrect) {
       await env.STORE_KV.put(rateLimitKey, String(attempts + 1), { expirationTtl: 300 });
       return new Response(
@@ -168,19 +158,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       );
     }
 
-    // 5. في حالة نجاح تسجيل الدخول (تصفير عداد المحاولات الفاشلة)
     if (attempts > 0) {
       await env.STORE_KV.delete(rateLimitKey);
     }
 
-    // إنشاء توكن جلسة مشفر وفريد (Session Token)
     const token = crypto.randomUUID();
     const sessionData = {
       email: configuredEmail,
       createdAt: Date.now()
     };
 
-    // حفظ الجلسة في KV لمدة 7 أيام (604,800 ثانية)
     await env.STORE_KV.put(`session:${token}`, JSON.stringify(sessionData), {
       expirationTtl: 604800
     });
@@ -194,7 +181,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: "حدث خطأ غير متوقع أثناء معالجة الطلب" }),
+      JSON.stringify({ error: "حدث خطأ غير متوقع" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
