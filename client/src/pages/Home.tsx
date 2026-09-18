@@ -122,7 +122,7 @@ const THEME_STYLES: Record<ThemeType, {
   medical: {
     bg: "bg-slate-950",
     cardBg: "bg-slate-900",
-    primary: "bg-cyan-500 hover:bg-cyan-400 text-slate-950",
+    primary: "bg-cyan-500 hover:cyan-400 text-slate-950",
     primaryText: "text-cyan-400",
     accent: "border-cyan-500",
     border: "border-slate-800",
@@ -167,6 +167,7 @@ export default function Home() {
   const [altPhone, setAltPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [websiteHpField, setWebsiteHpField] = useState(""); // مصيدة البوتات (Honeypot)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any | null>(null);
   const [timeLeft, setTimeLeft] = useState({ minutes: 15, seconds: 0 });
@@ -309,7 +310,8 @@ export default function Home() {
       selectedSize: config.enableSizes ? selectedSize : undefined,
       selectedColor: config.enableColors ? selectedColor : undefined,
       total: grandTotal,
-      currency: activeCountry?.currency || "ج.م"
+      currency: activeCountry?.currency || "ج.م",
+      website_hp_field: websiteHpField // إرسال حقل المصيدة لحماية الخادم
     };
 
     try {
@@ -587,6 +589,17 @@ export default function Home() {
           </div>
 
           <form onSubmit={handleSubmitOrder} className="space-y-3">
+            {/* حقل المصيدة (Honeypot) - مخفي تماماً عن البشر وصيد للبوتات */}
+            <input
+              type="text"
+              name="website_hp_field"
+              value={websiteHpField}
+              onChange={(e) => setWebsiteHpField(e.target.value)}
+              style={{ display: "none" }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+
             <div>
               <label className="block text-xs text-neutral-300 mb-1 font-bold">الاسم ثلاثي *</label>
               <input
