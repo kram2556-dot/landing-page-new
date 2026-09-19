@@ -28,7 +28,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const orderData = (await request.json()) as Record<string, any>;
 
       // حماية ضد البوتات والـ Spam: مصيدة Honeypot
-      // إذا ملأ البوت هذا الحقل المخفي، نرسل رد نجاح وهمي دون حفظ أي شيء في قاعدة البيانات
       if (orderData.website_hp_field && String(orderData.website_hp_field).trim() !== "") {
         return new Response(
           JSON.stringify({ success: true, message: "Order placed successfully" }),
@@ -44,9 +43,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         );
       }
 
-      // تجهيز كائن الطلب مع المعرف والتاريخ
+      // تسجيل وتنسيق تاريخ ووقت الطلب باللغة العربية وتوقيت القاهرة
+      const now = new Date();
+      const formattedDateAr = new Intl.DateTimeFormat("ar-EG", {
+        timeZone: "Africa/Cairo",
+        dateStyle: "full",
+        timeStyle: "short",
+      }).format(now);
+
+      // تجهيز كائن الطلب مع المعرف والتاريخ الدقيق
       const newOrder = {
-        id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: orderData.id || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         fullName: String(orderData.fullName).trim(),
         phone: String(orderData.phone).trim(),
         altPhone: orderData.altPhone ? String(orderData.altPhone).trim() : "",
@@ -55,11 +62,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         qty: Number(orderData.qty) || 1,
         selectedSize: orderData.selectedSize || "",
         selectedColor: orderData.selectedColor || "",
+        itemsBreakdown: orderData.itemsBreakdown || "",
+        appliedCoupon: orderData.appliedCoupon || "",
+        appliedDiscount: Number(orderData.appliedDiscount) || 0,
         total: Number(orderData.total) || 0,
-        currency: orderData.currency || "",
+        currency: orderData.currency || "ج.م",
         notes: orderData.notes || "",
         status: "new",
-        createdAt: Date.now()
+        createdAt: now.toISOString(),
+        orderDateAr: formattedDateAr,
+        timestamp: Date.now()
       };
 
       // جلب مصفوفة الطلبات الحالية من KV وإضافة الطلب الجديد في البداية
@@ -103,7 +115,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       } catch (_) {}
 
       return new Response(
-        JSON.stringify({ success: true, orderId: newOrder.id }),
+        JSON.stringify({ success: true, orderId: newOrder.id, orderDateAr: newOrder.orderDateAr }),
         { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (err) {
