@@ -31,6 +31,12 @@ export interface ReviewItem {
   rating: number;
 }
 
+export interface GalleryItem {
+  id: string;
+  image: string;
+  caption?: string;
+}
+
 export interface StoreConfig {
   storeName: string;
   logoUrl: string;
@@ -52,7 +58,8 @@ export interface StoreConfig {
   countries: Record<string, CountryConfig>;
   productTitle: string;
   productImage: string;
-  gallery: { id: string; image: string; caption: string }[];
+  gallery: GalleryItem[];
+  videoUrl?: string; // رابط الفيديو (يوتيوب أو فيسبوك أو MP4)
   currentPrice: number;
   oldPrice: number;
   features: string[];
@@ -72,7 +79,6 @@ export interface StoreConfig {
   tiktokPixelId: string;
   googlePixelId: string;
   ctaButtonText?: string;
-  // إعدادات كود الخصم عند الخروج
   enableExitPopup?: boolean;
   exitPopupTitle?: string;
   exitPopupText?: string;
@@ -114,9 +120,8 @@ export default function Home() {
   const [altPhone, setAltPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [websiteHpField, setWebsiteHpField] = useState(""); // مصيدة Honeypot
+  const [websiteHpField, setWebsiteHpField] = useState("");
 
-  // نظام كود الخصم عند الخروج
   const [showExitModal, setShowExitModal] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [appliedCouponCode, setAppliedCouponCode] = useState<string>("");
@@ -126,7 +131,6 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState({ minutes: 15, seconds: 0 });
   const [recentBuyer, setRecentBuyer] = useState<any | null>(null);
 
-  // قراءة مفاتيح الإعدادات المحلية والمحفوظة للألوان والمقاسات
   const enableColors = config ? (localStorage.getItem("store_enable_colors") !== "false" && config.enableColors !== false) : true;
   const colorsRaw = localStorage.getItem("store_colors_input") || config?.colors || "اسود, احمر, كحلي";
   const parsedColorsList = parseColors(colorsRaw);
@@ -137,7 +141,6 @@ export default function Home() {
 
   const ctaButtonText = localStorage.getItem("store_cta_text") || config?.ctaButtonText || "اطلب الآن والدفع عند الاستلام";
 
-  // مزامنة مصفوفة القطع عند تغير الكمية
   useEffect(() => {
     if (!config) return;
     const defaultSize = enableSizes && parsedSizesList[0] ? parsedSizesList[0] : "";
@@ -167,8 +170,8 @@ export default function Home() {
             setTimeLeft({ minutes: data.timerMinutes, seconds: 0 });
           }
 
-          if (data.themeId) {
-            setStoreThemeById(data.themeId);
+          if (data.themeId || data.selectedTheme) {
+            setStoreThemeById(data.themeId || data.selectedTheme);
           }
 
           const defaultSize = data.enableSizes && data.sizes ? data.sizes.split(",")[0]?.trim() : "";
@@ -179,7 +182,7 @@ export default function Home() {
           const firstProv = currentCountry?.provinces?.find((p: any) => p.enabled);
           if (firstProv) setSelectedProvinceId(firstProv.id);
 
-          // حقن Meta Pixel
+          // 1. حقن Meta Pixel
           if (data.metaPixelId && !window.fbq) {
             const s = document.createElement("script");
             s.innerHTML = `
@@ -194,7 +197,7 @@ export default function Home() {
             document.head.appendChild(s);
           }
 
-          // حقن TikTok Pixel
+          // 2. حقن TikTok Pixel
           if (data.tiktokPixelId && !window.ttq) {
             const s = document.createElement("script");
             s.innerHTML = `
@@ -207,7 +210,7 @@ export default function Home() {
             document.head.appendChild(s);
           }
 
-          // حقن Google Tag
+          // 3. حقن Google Tag
           if (data.googlePixelId && !window.gtag) {
             const s1 = document.createElement("script");
             s1.async = true;
@@ -228,7 +231,6 @@ export default function Home() {
       .catch((err) => console.error(err));
   }, [setStoreThemeById]);
 
-  // مستشعر خروج الزائر (Exit-Intent Trigger)
   useEffect(() => {
     if (!config || config.enableExitPopup === false) return;
     if (sessionStorage.getItem("exit_modal_shown") === "true") return;
@@ -257,7 +259,6 @@ export default function Home() {
     };
   }, [config]);
 
-  // عداد التنازل الديناميكي
   useEffect(() => {
     if (!config?.showTimer) return;
     const interval = setInterval(() => {
@@ -270,7 +271,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [config?.showTimer]);
 
-  // منبّه المبيعات الحية
   useEffect(() => {
     if (!config?.showRecentSales) return;
     const interval = setInterval(() => {
@@ -293,7 +293,6 @@ export default function Home() {
   const activeProvince = activeCountry?.provinces.find((p) => p.id === selectedProvinceId);
   const shippingCost = activeProvince?.shippingCost || 0;
 
-  // احتساب السعر وباقات العروض
   let productPriceTotal = config.currentPrice * selectedQty;
   if (config.showBundles && config.bundles?.length > 0) {
     const matchedBundle = config.bundles.find((b) => b.qty === selectedQty);
@@ -302,7 +301,6 @@ export default function Home() {
     }
   }
 
-  // تطبيق نسبة الخصم
   let discountAmount = 0;
   if (appliedDiscount > 0) {
     discountAmount = Math.round((productPriceTotal * appliedDiscount) / 100);
@@ -337,7 +335,6 @@ export default function Home() {
     setIsSubmitting(true);
     const orderId = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-    // توقيت وتاريخ عربي دقيق للطلب
     const now = new Date();
     const orderDateAr = new Intl.DateTimeFormat("ar-EG", {
       timeZone: "Africa/Cairo",
@@ -345,7 +342,6 @@ export default function Home() {
       timeStyle: "short",
     }).format(now);
 
-    // تجهيز تفاصيل القطع فقط إذا كانت مفعلة
     const itemsBreakdown = itemsSelections.map((item, i) => {
       const sizeStr = enableSizes && item.size ? `مقاس: ${item.size}` : "";
       const colorStr = enableColors && item.color ? `لون: ${item.color}` : "";
@@ -385,7 +381,6 @@ export default function Home() {
       if (res.ok) {
         setOrderSuccess(orderPayload);
 
-        // إرسال لـ Meta
         if (window.fbq && config.metaPixelId) {
           window.fbq("track", "Purchase", {
             currency: activeCountry?.currency || "EGP",
@@ -394,7 +389,6 @@ export default function Home() {
           }, { eventID: orderId });
         }
 
-        // إرسال لـ TikTok
         if (window.ttq && config.tiktokPixelId) {
           window.ttq.track("CompletePayment", {
             content_name: config.productTitle,
@@ -403,7 +397,6 @@ export default function Home() {
           });
         }
 
-        // إرسال لـ Google Tag
         if (window.gtag && config.googlePixelId) {
           window.gtag("event", "purchase", {
             transaction_id: orderId,
@@ -419,6 +412,69 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // مساعد استخراج وتوليد iframe الفيديو الذكي (فيسبوك، يوتيوب، أو MP4)
+  const renderVideoPlayer = (url: string) => {
+    if (!url || !url.trim()) return null;
+    const clean = url.trim();
+
+    // 1. يوتيوب (رابط عادي أو Shorts)
+    if (clean.includes("youtube.com") || clean.includes("youtu.be")) {
+      let vidId = "";
+      if (clean.includes("youtu.be/")) {
+        vidId = clean.split("youtu.be/")[1]?.split("?")[0];
+      } else if (clean.includes("shorts/")) {
+        vidId = clean.split("shorts/")[1]?.split("?")[0];
+      } else if (clean.includes("v=")) {
+        vidId = clean.split("v=")[1]?.split("&")[0];
+      }
+      if (vidId) {
+        return (
+          <div className="aspect-video w-full rounded-2xl overflow-hidden border shadow-lg" style={{ borderColor: "var(--color-border)" }}>
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${vidId}?rel=0&modestbranding=1`}
+              title="Product Video"
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        );
+      }
+    }
+
+    // 2. فيسبوك (Facebook Videos & Reels)
+    if (clean.includes("facebook.com") || clean.includes("fb.watch")) {
+      const fbEmbedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(clean)}&show_text=0&width=500`;
+      return (
+        <div className="aspect-video w-full rounded-2xl overflow-hidden border shadow-lg" style={{ borderColor: "var(--color-border)" }}>
+          <iframe
+            src={fbEmbedUrl}
+            title="Facebook Product Video"
+            className="w-full h-full"
+            scrolling="no"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      );
+    }
+
+    // 3. رابط MP4 مباشر
+    if (clean.endsWith(".mp4") || clean.includes(".mp4?")) {
+      return (
+        <div className="w-full rounded-2xl overflow-hidden border shadow-lg" style={{ borderColor: "var(--color-border)" }}>
+          <video controls playsInline className="w-full h-auto">
+            <source src={clean} type="video/mp4" />
+            متصفحك لا يدعم تشغيل الفيديو.
+          </video>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (orderSuccess) {
@@ -508,7 +564,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* 3. معرض الصور */}
+        {/* 3. معرض الصور الرئيسي */}
         <div className="space-y-3">
           <div className="aspect-square rounded-3xl overflow-hidden relative shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius)" }}>
             <img src={selectedImage || config.productImage} alt={config.productTitle} className="w-full h-full object-cover" />
@@ -637,7 +693,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 7. المقاسات والألوان (تظهر فقط إذا كانت مفعلة) */}
+        {/* 7. المقاسات والألوان */}
         {(enableSizes || enableColors) && (
           <div className="p-4 rounded-2xl space-y-4" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
@@ -683,7 +739,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* اختيار اللون الذكي */}
+                  {/* اختيار اللون */}
                   {enableColors && parsedColorsList.length > 0 && (
                     <div className="space-y-1.5 pt-1">
                       <span className="text-[11px] opacity-75 font-bold block">اللون:</span>
@@ -719,7 +775,51 @@ export default function Home() {
           </div>
         )}
 
-        {/* 8. مميزات ومواصفات المنتج */}
+        {/* 8. قسم الفيديو المدمج (فيسبوك أو يوتيوب أو MP4) */}
+        {config.videoUrl && config.videoUrl.trim() !== "" && (
+          <div className="p-4 rounded-2xl space-y-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: "var(--color-primary)" }}>
+              <span>🎥</span> فيديو توضيحي واستعراض تفاصيل المنتج:
+            </h3>
+            {renderVideoPlayer(config.videoUrl)}
+          </div>
+        )}
+
+        {/* 9. معرض الصور التفصيلي مع الوصف تحت كل صورة (Storytelling Showcase) */}
+        {config.gallery && config.gallery.length > 0 && (
+          <div className="space-y-4">
+            <div className="text-center space-y-1 pt-2">
+              <h3 className="text-sm font-black" style={{ color: "var(--color-primary)" }}>
+                تفاصيل ومميزات المنتج بالصور
+              </h3>
+              <p className="text-[11px] opacity-70">تعرف عن قرب على جودة الخامات والتصميم</p>
+            </div>
+
+            <div className="space-y-4">
+              {config.gallery.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="rounded-2xl overflow-hidden border shadow-lg"
+                  style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
+                >
+                  <img
+                    src={item.image}
+                    alt={item.caption || `صورة توضيحية ${idx + 1}`}
+                    className="w-full h-auto object-cover max-h-96"
+                    loading="lazy"
+                  />
+                  {item.caption && item.caption.trim() !== "" && (
+                    <div className="p-3 text-center border-t" style={{ borderColor: "var(--color-border)", background: "var(--color-bg)" }}>
+                      <p className="text-xs font-bold leading-relaxed">{item.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 10. مميزات ومواصفات المنتج */}
         {config.features?.length > 0 && (
           <div className="p-4 rounded-2xl space-y-2.5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>مميزات ومواصفات المنتج:</h3>
@@ -731,7 +831,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 9. آراء وتقييمات العملاء */}
+        {/* 11. آراء وتقييمات العملاء */}
         {config.showReviews && config.reviews?.length > 0 && (
           <div className="p-4 rounded-2xl space-y-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>آراء وتقييمات العملاء:</h3>
@@ -749,7 +849,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 10. استمارة تسجيل الطلب السريعة */}
+        {/* 12. استمارة تسجيل الطلب السريعة */}
         <div id="order-form" className="p-5 rounded-3xl space-y-4 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
           <div className="border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
             <h2 className="text-base font-black" style={{ color: "var(--color-primary)" }}>بيانات التوصيل والشحن للمنزل</h2>
@@ -882,7 +982,7 @@ export default function Home() {
           </form>
         </div>
 
-        {/* 11. قسم الضمان */}
+        {/* 13. قسم الضمان */}
         {config.showGuarantee && (
           <div className="p-4 rounded-2xl text-center space-y-1" style={{ background: "rgba(5, 150, 105, 0.1)", border: "1px solid rgba(5, 150, 105, 0.3)" }}>
             <h4 className="text-xs font-bold text-emerald-400">{config.guaranteeText}</h4>
@@ -891,7 +991,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* 12. إشعار المبيعات اللحظية */}
+      {/* 14. إشعار المبيعات اللحظية */}
       {recentBuyer && (
         <div className="fixed bottom-20 left-4 z-50 p-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs animate-fade-in" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
           <span className="text-emerald-400 text-lg">⚡</span>
@@ -902,7 +1002,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 13. زر الدعم الفني العائم لواتساب */}
+      {/* 15. زر الدعم الفني العائم لواتساب */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
           href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}`}
@@ -916,7 +1016,7 @@ export default function Home() {
         </a>
       )}
 
-      {/* 14. زر الشراء العائم للموبايل */}
+      {/* 16. زر الشراء العائم للموبايل */}
       {config.showStickyButton && (
         <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3" style={{ background: "rgba(18, 18, 18, 0.9)", borderColor: "var(--color-border)" }}>
           <div>
@@ -933,7 +1033,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 15. نافذة كود الخصم عند محاولة الخروج */}
+      {/* 17. نافذة كود الخصم عند محاولة الخروج */}
       {showExitModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" dir="rtl">
           <div className="p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative" style={{ background: "var(--color-card)", border: "2px solid var(--color-primary)" }}>
