@@ -59,7 +59,7 @@ export interface StoreConfig {
   productTitle: string;
   productImage: string;
   gallery: GalleryItem[];
-  videoUrl?: string; // رابط الفيديو (يوتيوب أو فيسبوك أو MP4)
+  videoUrl?: string;
   currentPrice: number;
   oldPrice: number;
   features: string[];
@@ -182,7 +182,6 @@ export default function Home() {
           const firstProv = currentCountry?.provinces?.find((p: any) => p.enabled);
           if (firstProv) setSelectedProvinceId(firstProv.id);
 
-          // 1. حقن Meta Pixel
           if (data.metaPixelId && !window.fbq) {
             const s = document.createElement("script");
             s.innerHTML = `
@@ -197,7 +196,6 @@ export default function Home() {
             document.head.appendChild(s);
           }
 
-          // 2. حقن TikTok Pixel
           if (data.tiktokPixelId && !window.ttq) {
             const s = document.createElement("script");
             s.innerHTML = `
@@ -210,7 +208,6 @@ export default function Home() {
             document.head.appendChild(s);
           }
 
-          // 3. حقن Google Tag
           if (data.googlePixelId && !window.gtag) {
             const s1 = document.createElement("script");
             s1.async = true;
@@ -414,12 +411,10 @@ export default function Home() {
     }
   };
 
-  // مساعد استخراج وتوليد iframe الفيديو الذكي (فيسبوك، يوتيوب، أو MP4)
   const renderVideoPlayer = (url: string) => {
     if (!url || !url.trim()) return null;
     const clean = url.trim();
 
-    // 1. يوتيوب (رابط عادي أو Shorts)
     if (clean.includes("youtube.com") || clean.includes("youtu.be")) {
       let vidId = "";
       if (clean.includes("youtu.be/")) {
@@ -444,7 +439,6 @@ export default function Home() {
       }
     }
 
-    // 2. فيسبوك (Facebook Videos & Reels)
     if (clean.includes("facebook.com") || clean.includes("fb.watch")) {
       const fbEmbedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(clean)}&show_text=0&width=500`;
       return (
@@ -462,7 +456,6 @@ export default function Home() {
       );
     }
 
-    // 3. رابط MP4 مباشر
     if (clean.endsWith(".mp4") || clean.includes(".mp4?")) {
       return (
         <div className="w-full rounded-2xl overflow-hidden border shadow-lg" style={{ borderColor: "var(--color-border)" }}>
@@ -501,29 +494,29 @@ export default function Home() {
     ].filter(Boolean).join("\n");
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 font-sans" style={{ background: "var(--color-bg)", color: "var(--color-text)" }} dir="rtl">
+      <div className="min-h-screen flex items-center justify-center p-4 font-sans" style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
         <div className="p-8 rounded-3xl max-w-md w-full text-center space-y-5 shadow-2xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl font-bold" style={{ background: "var(--color-badge-bg)", color: "var(--color-primary)" }}>
             ✓
           </div>
           <h2 className="text-2xl font-black" style={{ color: "var(--color-primary)" }}>تم استلام طلبك بنجاح!</h2>
-          <p className="text-xs opacity-80">
+          <p className="text-xs opacity-90" style={{ color: "var(--color-text, #111827)" }}>
             شكراً لك <span className="font-bold">{orderSuccess.fullName}</span>، سيتواصل معك فريق خدمة العملاء قريباً لتأكيد الشحن.
           </p>
-          <div className="p-4 rounded-2xl text-xs text-right space-y-1.5 opacity-90" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}>
+          <div className="p-4 rounded-2xl text-xs text-right space-y-1.5" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text, #111827)" }}>
             <p>رقم الطلب: <span className="font-mono font-bold">{orderSuccess.id}</span></p>
             <p>توقيت الطلب: <span className="font-mono">{orderSuccess.orderDateAr}</span></p>
             <p>المنتج: <span className="font-bold">{config.productTitle}</span></p>
             <p>الكمية: <span className="font-bold">{orderSuccess.qty}</span></p>
             {(enableSizes || enableColors) && (
-              <div className="border-t border-neutral-800 pt-1 text-[11px] whitespace-pre-line font-mono opacity-80">
+              <div className="border-t border-neutral-800/20 pt-1 text-[11px] whitespace-pre-line font-mono opacity-80">
                 {orderSuccess.itemsBreakdown}
               </div>
             )}
             {orderSuccess.appliedDiscount > 0 && (
-              <p className="font-bold text-emerald-400">تم تطبيق خصم {orderSuccess.appliedDiscount}%</p>
+              <p className="font-bold text-emerald-600">تم تطبيق خصم {orderSuccess.appliedDiscount}%</p>
             )}
-            <p className="border-t border-neutral-800 pt-1">
+            <p className="border-t border-neutral-800/20 pt-1">
               الإجمالي المطلوب: <span className="font-bold text-sm" style={{ color: "var(--color-primary)" }}>{orderSuccess.total} {orderSuccess.currency}</span>
             </p>
           </div>
@@ -542,7 +535,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen font-sans pb-28" style={{ background: "var(--color-bg)", color: "var(--color-text)" }} dir="rtl">
+    <div className="min-h-screen font-sans pb-28" style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
       {/* 1. الشريط العلوي */}
       {config.showTopBar && (
         <div className="text-xs font-black py-2.5 text-center px-4 transition text-white" style={{ background: "var(--color-primary)" }}>
@@ -550,14 +543,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* 2. ترويسة المتجر */}
-      <header className="border-b sticky top-0 z-40 px-4 py-3 backdrop-blur" style={{ borderColor: "var(--color-border)", background: "rgba(18, 18, 18, 0.75)" }}>
+      {/* 2. ترويسة المتجر متوافقة بالكامل مع لون الثيم */}
+      <header className="border-b sticky top-0 z-40 px-4 py-3 backdrop-blur shadow-sm" style={{ borderColor: "var(--color-border)", background: "var(--color-card, #FFFFFF)" }}>
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             {config.logoUrl && <img src={config.logoUrl} alt="Logo" className="h-7 w-auto object-contain" />}
-            <span className="font-black text-sm tracking-wide">{config.storeName}</span>
+            <span className="font-black text-sm tracking-wide" style={{ color: "var(--color-text, #111827)" }}>{config.storeName}</span>
           </div>
-          <span className="text-[11px] px-3 py-1 rounded-full font-bold" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <span className="text-[11px] px-3 py-1 rounded-full font-bold" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text, #111827)" }}>
             {activeCountry?.name} ({activeCountry?.currency})
           </span>
         </div>
@@ -599,10 +592,10 @@ export default function Home() {
 
         {/* 4. العداد وشريط المخزون */}
         {(config.showTimer || config.showStockBar) && (
-          <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             {config.showTimer && (
               <div className="text-center border-l pl-2" style={{ borderColor: "var(--color-border)" }}>
-                <span className="text-[10px] opacity-70 block font-bold">ينتهي العرض المؤقت خلال</span>
+                <span className="text-[10px] opacity-70 block font-bold" style={{ color: "var(--color-text, #111827)" }}>ينتهي العرض المؤقت خلال</span>
                 <span className="text-sm font-black font-mono" style={{ color: "var(--color-primary)" }}>
                   {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
                 </span>
@@ -610,37 +603,39 @@ export default function Home() {
             )}
             {config.showStockBar && (
               <div className="text-center pr-2">
-                <span className="text-[10px] opacity-70 block font-bold">المتبقي في المستودع</span>
-                <span className="text-sm font-black text-rose-400 font-mono">{config.stockLeft} قطع فقط</span>
+                <span className="text-[10px] opacity-70 block font-bold" style={{ color: "var(--color-text, #111827)" }}>المتبقي في المستودع</span>
+                <span className="text-sm font-black text-rose-500 font-mono">{config.stockLeft} قطع فقط</span>
               </div>
             )}
           </div>
         )}
 
-        {/* 5. تفاصيل السعر والاسم وعداد الكمية المرن */}
+        {/* 5. تفاصيل السعر والاسم وعداد الكمية (مع تصحيح وضوح العنوان) */}
         <div className="space-y-3">
-          <h1 className="text-lg sm:text-xl font-black leading-snug">{config.productTitle}</h1>
+          <h1 className="text-lg sm:text-xl font-black leading-snug" style={{ color: "var(--color-text, #111827)" }}>
+            {config.productTitle}
+          </h1>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-baseline gap-3">
               <span className="text-2xl font-black font-mono" style={{ color: "var(--color-primary)" }}>
                 {config.currentPrice} {activeCountry?.currency}
               </span>
               {config.oldPrice > config.currentPrice && (
-                <span className="text-xs opacity-50 line-through font-mono">
+                <span className="text-xs opacity-50 line-through font-mono" style={{ color: "var(--color-text, #111827)" }}>
                   {config.oldPrice} {activeCountry?.currency}
                 </span>
               )}
             </div>
 
             {/* عداد الكمية */}
-            <div className="flex items-center gap-3 rounded-2xl px-3 py-1.5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-              <span className="text-xs opacity-75 font-bold">الكمية:</span>
+            <div className="flex items-center gap-3 rounded-2xl px-3 py-1.5 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+              <span className="text-xs opacity-75 font-bold" style={{ color: "var(--color-text, #111827)" }}>الكمية:</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedQty((q) => Math.max(1, q - 1))}
                   className="w-8 h-8 rounded-xl font-black text-base flex items-center justify-center transition"
-                  style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+                  style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text, #111827)" }}
                 >
                   -
                 </button>
@@ -649,7 +644,7 @@ export default function Home() {
                   type="button"
                   onClick={() => setSelectedQty((q) => q + 1)}
                   className="w-8 h-8 rounded-xl font-black text-base flex items-center justify-center transition"
-                  style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+                  style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text, #111827)" }}
                 >
                   +
                 </button>
@@ -661,7 +656,7 @@ export default function Home() {
         {/* 6. باقات التوفير */}
         {config.showBundles && config.bundles?.length > 0 && (
           <div className="space-y-2">
-            <label className="text-xs font-bold opacity-80">اختر العرض الأنسب لك:</label>
+            <label className="text-xs font-bold opacity-80" style={{ color: "var(--color-text, #111827)" }}>اختر العرض الأنسب لك:</label>
             <div className="space-y-2">
               {config.bundles.map((b) => {
                 const isSelected = selectedQty === b.qty;
@@ -678,8 +673,8 @@ export default function Home() {
                     <div className="flex items-center gap-2.5">
                       <input type="radio" checked={isSelected} readOnly style={{ accentColor: "var(--color-primary)" }} />
                       <div>
-                        <p className="text-xs font-bold">{b.title}</p>
-                        {b.savings && <p className="text-[10px] text-emerald-400 font-bold">{b.savings}</p>}
+                        <p className="text-xs font-bold" style={{ color: "var(--color-text, #111827)" }}>{b.title}</p>
+                        {b.savings && <p className="text-[10px] text-emerald-500 font-bold">{b.savings}</p>}
                       </div>
                     </div>
                     <div className="text-left">
@@ -695,13 +690,13 @@ export default function Home() {
 
         {/* 7. المقاسات والألوان */}
         {(enableSizes || enableColors) && (
-          <div className="p-4 rounded-2xl space-y-4" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="p-4 rounded-2xl space-y-4 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
               <label className="text-xs font-black" style={{ color: "var(--color-primary)" }}>
                 {selectedQty > 1 ? `حدد خيارات كل قطعة مطلوبة (${selectedQty} قطع):` : "حدد المقاس واللون:"}
               </label>
               {selectedQty > 1 && (
-                <span className="text-[10px] opacity-70">يمكنك اختيار مقاس ولون مختلف لكل قطعة</span>
+                <span className="text-[10px] opacity-70" style={{ color: "var(--color-text, #111827)" }}>يمكنك اختيار مقاس ولون مختلف لكل قطعة</span>
               )}
             </div>
 
@@ -715,7 +710,7 @@ export default function Home() {
                   {/* اختيار المقاس */}
                   {enableSizes && parsedSizesList.length > 0 && (
                     <div className="space-y-1.5">
-                      <span className="text-[11px] opacity-75 font-bold block">المقاس:</span>
+                      <span className="text-[11px] opacity-75 font-bold block" style={{ color: "var(--color-text, #111827)" }}>المقاس:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {parsedSizesList.map((val) => {
                           const isSelected = item.size === val;
@@ -727,7 +722,7 @@ export default function Home() {
                               className="px-3.5 py-1.5 rounded-lg text-xs font-bold border transition"
                               style={{
                                 background: isSelected ? "var(--color-primary)" : "var(--color-card)",
-                                color: isSelected ? "#FFFFFF" : "inherit",
+                                color: isSelected ? "#FFFFFF" : "var(--color-text, #111827)",
                                 borderColor: isSelected ? "var(--color-primary)" : "var(--color-border)"
                               }}
                             >
@@ -742,7 +737,7 @@ export default function Home() {
                   {/* اختيار اللون */}
                   {enableColors && parsedColorsList.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] opacity-75 font-bold block">اللون:</span>
+                      <span className="text-[11px] opacity-75 font-bold block" style={{ color: "var(--color-text, #111827)" }}>اللون:</span>
                       <div className="flex flex-wrap gap-2">
                         {parsedColorsList.map((color) => {
                           const isSelected = item.color === color.name;
@@ -755,12 +750,13 @@ export default function Home() {
                               style={{
                                 borderColor: isSelected ? "var(--color-primary)" : "var(--color-border)",
                                 background: isSelected ? "var(--color-badge-bg)" : "var(--color-card)",
+                                color: "var(--color-text, #111827)",
                                 transform: isSelected ? "scale(1.05)" : "none"
                               }}
                             >
                               <span
                                 className="w-3.5 h-3.5 rounded-full border shadow-sm"
-                                style={{ backgroundColor: color.hex, borderColor: "rgba(255,255,255,0.2)" }}
+                                style={{ backgroundColor: color.hex, borderColor: "rgba(0,0,0,0.15)" }}
                               />
                               <span>{color.name}</span>
                             </button>
@@ -777,7 +773,7 @@ export default function Home() {
 
         {/* 8. قسم الفيديو المدمج (فيسبوك أو يوتيوب أو MP4) */}
         {config.videoUrl && config.videoUrl.trim() !== "" && (
-          <div className="p-4 rounded-2xl space-y-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: "var(--color-primary)" }}>
               <span>🎥</span> فيديو توضيحي واستعراض تفاصيل المنتج:
             </h3>
@@ -785,14 +781,14 @@ export default function Home() {
           </div>
         )}
 
-        {/* 9. معرض الصور التفصيلي مع الوصف تحت كل صورة (Storytelling Showcase) */}
+        {/* 9. معرض الصور التفصيلي مع الوصف المكتوب تحت كل صورة */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <div className="text-center space-y-1 pt-2">
               <h3 className="text-sm font-black" style={{ color: "var(--color-primary)" }}>
                 تفاصيل ومميزات المنتج بالصور
               </h3>
-              <p className="text-[11px] opacity-70">تعرف عن قرب على جودة الخامات والتصميم</p>
+              <p className="text-[11px] opacity-70" style={{ color: "var(--color-text, #111827)" }}>تعرف عن قرب على جودة الخامات والتصميم</p>
             </div>
 
             <div className="space-y-4">
@@ -810,7 +806,7 @@ export default function Home() {
                   />
                   {item.caption && item.caption.trim() !== "" && (
                     <div className="p-3 text-center border-t" style={{ borderColor: "var(--color-border)", background: "var(--color-bg)" }}>
-                      <p className="text-xs font-bold leading-relaxed">{item.caption}</p>
+                      <p className="text-xs font-bold leading-relaxed" style={{ color: "var(--color-text, #111827)" }}>{item.caption}</p>
                     </div>
                   )}
                 </div>
@@ -821,9 +817,9 @@ export default function Home() {
 
         {/* 10. مميزات ومواصفات المنتج */}
         {config.features?.length > 0 && (
-          <div className="p-4 rounded-2xl space-y-2.5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="p-4 rounded-2xl space-y-2.5 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>مميزات ومواصفات المنتج:</h3>
-            <ul className="space-y-1.5 text-xs opacity-90 list-disc list-inside">
+            <ul className="space-y-1.5 text-xs opacity-90 list-disc list-inside" style={{ color: "var(--color-text, #111827)" }}>
               {config.features.map((feat, idx) => (
                 <li key={idx}>{feat}</li>
               ))}
@@ -833,16 +829,16 @@ export default function Home() {
 
         {/* 11. آراء وتقييمات العملاء */}
         {config.showReviews && config.reviews?.length > 0 && (
-          <div className="p-4 rounded-2xl space-y-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>آراء وتقييمات العملاء:</h3>
             <div className="space-y-2.5">
               {config.reviews.map((rev, idx) => (
                 <div key={idx} className="p-3 rounded-xl border space-y-1" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold">{rev.name}</span>
-                    <span className="text-amber-400 font-bold">{"★".repeat(rev.rating || 5)}</span>
+                    <span className="font-bold" style={{ color: "var(--color-text, #111827)" }}>{rev.name}</span>
+                    <span className="text-amber-500 font-bold">{"★".repeat(rev.rating || 5)}</span>
                   </div>
-                  <p className="text-[11px] opacity-75">{rev.comment}</p>
+                  <p className="text-[11px] opacity-75" style={{ color: "var(--color-text, #111827)" }}>{rev.comment}</p>
                 </div>
               ))}
             </div>
@@ -853,7 +849,7 @@ export default function Home() {
         <div id="order-form" className="p-5 rounded-3xl space-y-4 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
           <div className="border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
             <h2 className="text-base font-black" style={{ color: "var(--color-primary)" }}>بيانات التوصيل والشحن للمنزل</h2>
-            <p className="text-[11px] opacity-70">الدفع نقداً عند استلام وفحص المنتج أمام المندوب</p>
+            <p className="text-[11px] opacity-70" style={{ color: "var(--color-text, #111827)" }}>الدفع نقداً عند استلام وفحص المنتج أمام المندوب</p>
           </div>
 
           <form onSubmit={handleSubmitOrder} className="space-y-3">
@@ -868,7 +864,7 @@ export default function Home() {
             />
 
             <div>
-              <label className="block text-xs mb-1 font-bold">الاسم بالكامل *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>الاسم بالكامل *</label>
               <input
                 type="text"
                 required
@@ -876,13 +872,13 @@ export default function Home() {
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="اكتب اسمك كاملاً"
                 className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 font-bold">رقم الهاتف *</label>
+                <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>رقم الهاتف *</label>
                 <input
                   type="tel"
                   required
@@ -890,32 +886,32 @@ export default function Home() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="رقم الهاتف للتواصل"
                   className="w-full border rounded-xl p-3 text-xs font-mono focus:outline-none"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
                 />
               </div>
               <div>
-                <label className="block text-xs opacity-75 mb-1">رقم هاتف بديل (اختياري)</label>
+                <label className="block text-xs opacity-75 mb-1" style={{ color: "var(--color-text, #111827)" }}>رقم هاتف بديل (اختياري)</label>
                 <input
                   type="tel"
                   value={altPhone}
                   onChange={(e) => setAltPhone(e.target.value)}
                   placeholder="رقم احتياطي للمندوب"
                   className="w-full border rounded-xl p-3 text-xs font-mono focus:outline-none"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold">المحافظة *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>المحافظة *</label>
               <select
                 value={selectedProvinceId}
                 onChange={(e) => setSelectedProvinceId(e.target.value)}
                 className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               >
                 {activeCountry?.provinces.filter((p) => p.enabled).map((p) => (
-                  <option key={p.id} value={p.id} style={{ background: "#18181B", color: "#FFFFFF" }}>
+                  <option key={p.id} value={p.id} style={{ background: "var(--color-card)", color: "var(--color-text, #111827)" }}>
                     {p.name} {p.shippingCost > 0 ? `(+${p.shippingCost} ${activeCountry.currency} شحن)` : "(شحن مجاني)"}
                   </option>
                 ))}
@@ -923,7 +919,7 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold">تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
               <input
                 type="text"
                 required
@@ -931,35 +927,35 @@ export default function Home() {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="المنطقة، اسم الشارع، رقم العقار أو علامة مميزة"
                 className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             <div>
-              <label className="block text-xs opacity-70 mb-1">ملاحظات إضافية (اختياري)</label>
+              <label className="block text-xs opacity-70 mb-1" style={{ color: "var(--color-text, #111827)" }}>ملاحظات إضافية (اختياري)</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="أي تعليمات خاصة بموعد الاستلام"
                 className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "inherit" }}
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             {/* ملخص السعر */}
             <div className="p-3.5 rounded-xl border space-y-1.5 text-xs" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
-              <div className="flex justify-between opacity-75">
+              <div className="flex justify-between opacity-75" style={{ color: "var(--color-text, #111827)" }}>
                 <span>سعر الطلب ({selectedQty} قطع):</span>
                 <span className="font-mono">{productPriceTotal} {activeCountry?.currency}</span>
               </div>
               {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-400 font-bold">
+                <div className="flex justify-between text-emerald-600 font-bold">
                   <span>كوبون الخصم ({appliedCouponCode} - {appliedDiscount}%):</span>
                   <span className="font-mono">-{discountAmount} {activeCountry?.currency}</span>
                 </div>
               )}
-              <div className="flex justify-between opacity-75">
+              <div className="flex justify-between opacity-75" style={{ color: "var(--color-text, #111827)" }}>
                 <span>تكلفة الشحن:</span>
                 <span className="font-mono">
                   {shippingCost > 0 ? `${shippingCost} ${activeCountry?.currency}` : "مجاني"}
@@ -984,17 +980,17 @@ export default function Home() {
 
         {/* 13. قسم الضمان */}
         {config.showGuarantee && (
-          <div className="p-4 rounded-2xl text-center space-y-1" style={{ background: "rgba(5, 150, 105, 0.1)", border: "1px solid rgba(5, 150, 105, 0.3)" }}>
-            <h4 className="text-xs font-bold text-emerald-400">{config.guaranteeText}</h4>
-            {config.guaranteeSubtext && <p className="text-[11px] opacity-75">{config.guaranteeSubtext}</p>}
+          <div className="p-4 rounded-2xl text-center space-y-1 shadow-sm" style={{ background: "rgba(5, 150, 105, 0.1)", border: "1px solid rgba(5, 150, 105, 0.3)" }}>
+            <h4 className="text-xs font-bold text-emerald-600">{config.guaranteeText}</h4>
+            {config.guaranteeSubtext && <p className="text-[11px] opacity-75" style={{ color: "var(--color-text, #111827)" }}>{config.guaranteeSubtext}</p>}
           </div>
         )}
       </main>
 
       {/* 14. إشعار المبيعات اللحظية */}
       {recentBuyer && (
-        <div className="fixed bottom-20 left-4 z-50 p-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs animate-fade-in" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-          <span className="text-emerald-400 text-lg">⚡</span>
+        <div className="fixed bottom-20 left-4 z-50 p-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs animate-fade-in" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text, #111827)" }}>
+          <span className="text-emerald-500 text-lg">⚡</span>
           <div>
             <p className="font-bold">{recentBuyer.name} من {recentBuyer.city}</p>
             <p className="text-[10px] opacity-70">اشترى للتو ({recentBuyer.time})</p>
@@ -1018,9 +1014,9 @@ export default function Home() {
 
       {/* 16. زر الشراء العائم للموبايل */}
       {config.showStickyButton && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3" style={{ background: "rgba(18, 18, 18, 0.9)", borderColor: "var(--color-border)" }}>
+        <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3 shadow-lg" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
           <div>
-            <span className="text-[10px] opacity-70 block">الإجمالي:</span>
+            <span className="text-[10px] opacity-70 block" style={{ color: "var(--color-text, #111827)" }}>الإجمالي:</span>
             <span className="text-base font-black font-mono" style={{ color: "var(--color-primary)" }}>{grandTotal} {activeCountry?.currency}</span>
           </div>
           <button
@@ -1036,24 +1032,25 @@ export default function Home() {
       {/* 17. نافذة كود الخصم عند محاولة الخروج */}
       {showExitModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" dir="rtl">
-          <div className="p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative" style={{ background: "var(--color-card)", border: "2px solid var(--color-primary)" }}>
+          <div className="p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative" style={{ background: "var(--color-card)", border: "2px solid var(--color-primary)", color: "var(--color-text, #111827)" }}>
             <button
               onClick={() => setShowExitModal(false)}
               className="absolute top-4 left-4 opacity-60 hover:opacity-100 text-lg font-bold"
+              style={{ color: "var(--color-text, #111827)" }}
             >
               ✕
             </button>
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl font-bold" style={{ background: "var(--color-badge-bg)", color: "var(--color-primary)" }}>
               🎁
             </div>
-            <h3 className="text-lg font-black">
+            <h3 className="text-lg font-black" style={{ color: "var(--color-text, #111827)" }}>
               {config.exitPopupTitle || "انتظر! لا تفوت هذا العرض الخاص 🎁"}
             </h3>
-            <p className="text-xs opacity-80 leading-relaxed">
+            <p className="text-xs opacity-80 leading-relaxed" style={{ color: "var(--color-text, #111827)" }}>
               {config.exitPopupText || "احصل على خصم إضافي خاص بك الآن قبل المغادرة!"}
             </p>
             <div className="border border-dashed p-3 rounded-2xl" style={{ background: "var(--color-bg)", borderColor: "var(--color-primary)" }}>
-              <span className="text-[11px] opacity-70 block">كوبون خصم إضافي حصري:</span>
+              <span className="text-[11px] opacity-70 block" style={{ color: "var(--color-text, #111827)" }}>كوبون خصم إضافي حصري:</span>
               <span className="text-xl font-black font-mono tracking-wider" style={{ color: "var(--color-primary)" }}>
                 {config.exitCouponCode || "SPECIAL10"} (خصم {config.exitCouponDiscountPercent || 10}%)
               </span>
@@ -1068,6 +1065,7 @@ export default function Home() {
             <button
               onClick={() => setShowExitModal(false)}
               className="text-[11px] opacity-50 hover:opacity-100 block mx-auto underline"
+              style={{ color: "var(--color-text, #111827)" }}
             >
               شكراً، لا أريد هذا الخصم
             </button>
