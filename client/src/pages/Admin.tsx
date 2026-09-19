@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-export type ThemeType = "sneakers" | "perfume" | "fashion" | "medical" | "home" | "kids";
+import { STORE_THEMES, StoreTheme } from "../const";
 
 export interface ProvinceItem {
   id: string;
@@ -20,7 +19,7 @@ export interface CountryConfig {
 export interface GalleryItem {
   id: string;
   image: string;
-  caption: string;
+  caption?: string;
 }
 
 export interface BundleItem {
@@ -42,7 +41,7 @@ export interface StoreConfig {
   adminEmail: string;
   adminPassword?: string;
   logoUrl: string;
-  selectedTheme: ThemeType;
+  selectedTheme: string;
   showTopBar: boolean;
   topBarText: string;
   showTimer: boolean;
@@ -61,6 +60,7 @@ export interface StoreConfig {
   productTitle: string;
   productImage: string;
   gallery: GalleryItem[];
+  videoUrl?: string; // رابط الفيديو (يوتيوب أو فيسبوك أو رابط مباشر)
   currentPrice: number;
   oldPrice: number;
   features: string[];
@@ -80,7 +80,6 @@ export interface StoreConfig {
   metaAccessToken: string;
   tiktokPixelId: string;
   googlePixelId: string;
-  // إعدادات كود الخصم عند الخروج (Exit Intent)
   enableExitPopup?: boolean;
   exitPopupTitle?: string;
   exitPopupText?: string;
@@ -147,7 +146,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   adminEmail: "admin@example.com",
   adminPassword: "",
   logoUrl: "",
-  selectedTheme: "sneakers",
+  selectedTheme: "dark-onyx",
   showTopBar: true,
   topBarText: "عرض خاص لفترة محدودة — شحن سريع وتوصيل للمنزل",
   showTimer: true,
@@ -166,6 +165,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   productTitle: "اسم المنتج هنا",
   productImage: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80",
   gallery: [],
+  videoUrl: "",
   currentPrice: 199,
   oldPrice: 350,
   features: [
@@ -174,9 +174,9 @@ const DEFAULT_CONFIG: StoreConfig = {
     "توصيل سريع حتى باب المنزل"
   ],
   enableSizes: false,
-  sizes: "M, L, XL",
+  sizes: "41, 42, 43, 44",
   enableColors: false,
-  colors: "أسود, أبيض",
+  colors: "أسود, أبيض, كحلي",
   showBundles: false,
   bundles: [
     { qty: 1, title: "قطعة واحدة", price: 199 },
@@ -200,15 +200,6 @@ const DEFAULT_CONFIG: StoreConfig = {
   exitCouponCode: "SPECIAL10",
   exitCouponDiscountPercent: 10
 };
-
-const THEMES_LIST = [
-  { id: "sneakers" as ThemeType, name: "أحذية ورياضة (Street Sneakers)", desc: "داكن كربوني / برتقالي ناري محفز", color: "#f59e0b" },
-  { id: "perfume" as ThemeType, name: "عطور وتجميل (Royal Perfume)", desc: "بنفسجي ليلي ملكي / ذهب شمبانيا", color: "#dfba73" },
-  { id: "fashion" as ThemeType, name: "ملابس وأزياء (Fashion Elegance)", desc: "إسبريسو دافئ / برونزي توسكاني", color: "#d4a373" },
-  { id: "medical" as ThemeType, name: "منتجات طبية وصحية (Clinical Clean)", desc: "أبيض بورسلين نقي / أزرق ملكي كحلي", color: "#0284c7" },
-  { id: "home" as ThemeType, name: "أدوات منزلية وإلكترونيات (Home & Tech)", desc: "كحلي تكنولوجي داكن / تيتانيوم أزرق", color: "#3b82f6" },
-  { id: "kids" as ThemeType, name: "ألعاب أطفال وهدايا (Kids Joy)", desc: "رمادي ناعم ونظيف / أخضر زمردي مبهج", color: "#10b981" }
-];
 
 export default function Admin() {
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
@@ -316,6 +307,9 @@ export default function Admin() {
       }
       payload.adminPassword = newPassword;
     }
+
+    // حفظ الثيم المختار محلياً أيضاً
+    localStorage.setItem("store_theme_id", config.selectedTheme);
 
     try {
       const res = await fetch("/api/store", {
@@ -440,10 +434,10 @@ export default function Admin() {
 
   const exportToCSV = () => {
     if (orders.length === 0) return alert("لا توجد طلبات لتصديرها");
-    const headers = ["معرف الطلب", "التاريخ", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "تفاصيل المقاسات والألوان", "الإجمالي", "الحالة"];
+    const headers = ["معرف الطلب", "التاريخ والوقت", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "تفاصيل المقاسات والألوان", "الإجمالي", "الحالة"];
     const rows = orders.map((o) => [
       o.id,
-      new Date(o.createdAt || o.date).toLocaleString("ar-EG"),
+      `"${o.orderDateAr || new Date(o.createdAt || o.date).toLocaleString("ar-EG")}"`,
       `"${o.fullName || ""}"`,
       `"${o.phone || ""}"`,
       `"${o.governorate || ""}"`,
@@ -541,9 +535,9 @@ export default function Admin() {
 
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
-            { id: "product", name: "المنتج والصور" },
+            { id: "product", name: "المنتج والصور والفيديو" },
             { id: "marketing_tools", name: "أدوات الترويج والخصم" },
-            { id: "themes", name: "ثيمات الألوان" },
+            { id: "themes", name: `ثيمات المتجر (10 ثيمات)` },
             { id: "shipping", name: "الدول والشحن" },
             { id: "pixels", name: "البيكسل و CAPI" },
             { id: "settings", name: "حساب الإدارة والأمان" },
@@ -555,7 +549,7 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* تبويب المنتج والصور والمعرض */}
+        {/* 1. تبويب المنتج والصور والفيديو والمعرض */}
         {activeTab === "product" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">بيانات المنتج وتفاصيل العرض</h2>
@@ -596,12 +590,27 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* معرض الصور الإضافية (حتى 8 صور) */}
+              {/* حقل فيديو المنتج (فيسبوك، يوتيوب، أو MP4) */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs text-amber-400 font-bold">رابط فيديو المنتج (اختياري - فيسبوك أو يوتيوب)</label>
+                  <span className="text-[10px] text-neutral-500">يعمل بدون خروج العميل من الصفحة</span>
+                </div>
+                <input
+                  type="text"
+                  value={config.videoUrl || ""}
+                  onChange={(e) => setConfig({ ...config, videoUrl: e.target.value })}
+                  placeholder="ضع رابط فيديو من فيسبوك أو يوتيوب (مثال: https://www.facebook.com/... أو https://youtu.be/...)"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-white"
+                />
+              </div>
+
+              {/* معرض الصور الإضافية مع الوصف الاختياري تحت كل صورة */}
               <div className="space-y-3 border-t border-neutral-800 pt-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="block text-xs text-amber-400 font-bold">معرض الصور الإضافية (Gallery)</label>
-                    <span className="text-[10px] text-neutral-500">تقليب زوايا وتفاصيل المنتج (حتى 8 صور)</span>
+                    <label className="block text-xs text-amber-400 font-bold">معرض الصور التفصيلي (مع وصف اختياري لكل صورة)</label>
+                    <span className="text-[10px] text-neutral-500">ارفع حتى 8 صور مع كتابة ميزة أو وصف يظهر أسفل كل صورة</span>
                   </div>
                   {(!config.gallery || config.gallery.length < 8) && (
                     <label className="bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition">
@@ -614,7 +623,7 @@ export default function Admin() {
                           const f = e.target.files?.[0]; 
                           if (f) {
                             compressAndSetImage(f, (b) => {
-                              const newGalleryItem = { id: `img_${Date.now()}`, image: b, caption: "" };
+                              const newGalleryItem: GalleryItem = { id: `img_${Date.now()}`, image: b, caption: "" };
                               setConfig({ ...config, gallery: [...(config.gallery || []), newGalleryItem] });
                             });
                           }
@@ -625,20 +634,33 @@ export default function Admin() {
                 </div>
 
                 {config.gallery && config.gallery.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {config.gallery.map((item, idx) => (
-                      <div key={item.id || idx} className="relative bg-neutral-950 border border-neutral-800 rounded-xl p-2 flex flex-col items-center gap-2">
-                        <img src={item.image} alt={`Gallery ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-neutral-800" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = config.gallery.filter((_, i) => i !== idx);
-                            setConfig({ ...config, gallery: updated });
-                          }}
-                          className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[11px] font-bold py-1 rounded-lg border border-red-500/20 transition"
-                        >
-                          حذف ✕
-                        </button>
+                      <div key={item.id || idx} className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 flex gap-3 items-center">
+                        <img src={item.image} alt={`Gallery ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-neutral-800 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="text"
+                            value={item.caption || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updated = config.gallery.map((g, i) => i === idx ? { ...g, caption: val } : g);
+                              setConfig({ ...config, gallery: updated });
+                            }}
+                            placeholder="وصف أو ميزة الصورة (اختياري)"
+                            className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-xs text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = config.gallery.filter((_, i) => i !== idx);
+                              setConfig({ ...config, gallery: updated });
+                            }}
+                            className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[11px] font-bold py-1 rounded-lg border border-red-500/20 transition"
+                          >
+                            حذف الصورة ✕
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -649,7 +671,7 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* المقاسات والألوان */}
+              {/* المقاسات والألوان الذكية ومفاتيح التفعيل */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -663,14 +685,14 @@ export default function Admin() {
                     <label className="text-xs font-bold">تفعيل خيارات الألوان</label>
                     <input type="checkbox" checked={config.enableColors} onChange={(e) => setConfig({ ...config, enableColors: e.target.checked })} className="w-4 h-4 accent-amber-500" />
                   </div>
-                  <input type="text" disabled={!config.enableColors} value={config.colors} onChange={(e) => setConfig({ ...config, colors: e.target.value })} placeholder="أسود, أبيض, رمادي" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs disabled:opacity-40" />
+                  <input type="text" disabled={!config.enableColors} value={config.colors} onChange={(e) => setConfig({ ...config, colors: e.target.value })} placeholder="أسود, أحمر, كحلي, بيج" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs disabled:opacity-40" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* تبويب أدوات الترويج والعداد وكوبون الخصم عند الخروج */}
+        {/* 2. تبويب أدوات الترويج والعداد وكوبون الخصم عند الخروج */}
         {activeTab === "marketing_tools" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">التحكم في عناصر التحفيز ونوافذ الخصم</h2>
@@ -824,25 +846,42 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب الثيمات */}
+        {/* 3. تبويب الـ 10 ثيمات التخصصية الكاملة */}
         {activeTab === "themes" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">ثيمات ألوان المتجر</h2>
+            <div className="border-b border-neutral-800 pb-3">
+              <h2 className="font-bold text-base text-amber-400">ثيمات ألوان المتجر (10 ثيمات تخصصية)</h2>
+              <p className="text-xs text-neutral-400 mt-1">اختر الثيم المتوافق مع طبيعة منتجك لتغيير ألوان وهوية المتجر فوراً.</p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {THEMES_LIST.map((th) => (
-                <div key={th.id} onClick={() => setConfig({ ...config, selectedTheme: th.id })} className={`cursor-pointer p-4 rounded-xl border-2 transition flex items-center justify-between ${config.selectedTheme === th.id ? "border-amber-400 bg-amber-500/10" : "border-neutral-800 bg-neutral-950"}`}>
-                  <div className="flex items-center gap-3">
-                    <span style={{ backgroundColor: th.color }} className="w-5 h-5 rounded-full shadow-md flex-shrink-0" />
-                    <div><p className="text-xs font-bold text-white">{th.name}</p><p className="text-[11px] text-neutral-400">{th.desc}</p></div>
+              {STORE_THEMES.map((th: StoreTheme) => {
+                const isSelected = config.selectedTheme === th.id;
+                return (
+                  <div
+                    key={th.id}
+                    onClick={() => {
+                      setConfig({ ...config, selectedTheme: th.id });
+                      localStorage.setItem("store_theme_id", th.id);
+                    }}
+                    className={`cursor-pointer p-4 rounded-xl border-2 transition flex items-center justify-between ${isSelected ? "border-amber-400 bg-amber-500/10" : "border-neutral-800 bg-neutral-950"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span style={{ backgroundColor: th.primary }} className="w-5 h-5 rounded-full shadow-md flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-white">{th.name}</p>
+                        <p className="text-[11px] text-neutral-400">{th.category}</p>
+                      </div>
+                    </div>
+                    {isSelected && <span className="text-amber-400 font-bold text-xs">✓ مفعل</span>}
                   </div>
-                  {config.selectedTheme === th.id && <span className="text-amber-400 font-bold text-xs">✓ مفعل</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* تبويب الشحن والمحافظات */}
+        {/* 4. تبويب الشحن والمحافظات */}
         {activeTab === "shipping" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-4 space-y-3">
@@ -970,7 +1009,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب الواتساب والبيكسل و CAPI */}
+        {/* 5. تبويب الواتساب والبيكسل و CAPI */}
         {activeTab === "pixels" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع (CAPI)</h2>
@@ -1016,7 +1055,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب حساب الإدارة والأمان */}
+        {/* 6. تبويب حساب الإدارة والأمان */}
         {activeTab === "settings" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-3">
@@ -1068,13 +1107,13 @@ export default function Admin() {
           </div>
         )}
 
-        {/* تبويب الطلبات السحابية */}
+        {/* 7. تبويب الطلبات السحابية مع التوقيت المنسق */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h2 className="font-bold text-base text-amber-400">سجل الطلبات السحابية ({orders.length})</h2>
-                <span className="text-[10px] text-neutral-500">تفصيل كامل للمقاسات والألوان المتعددة مع دعم الترقيم الآلي</span>
+                <span className="text-[10px] text-neutral-500">تفصيل كامل للمقاسات والألوان المتعددة مع دعم الترقيم الآلي والتاريخ العربي</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={exportToCSV} className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
@@ -1148,7 +1187,7 @@ export default function Admin() {
                     </div>
 
                     <div className="flex justify-between items-center text-neutral-500 text-[10px] pt-1">
-                      <span>{new Date(ord.createdAt || ord.date).toLocaleString("ar-EG")}</span>
+                      <span>{ord.orderDateAr || new Date(ord.createdAt || ord.date).toLocaleString("ar-EG")}</span>
                       {ord.notes && <span className="italic text-neutral-400">ملاحظة: {ord.notes}</span>}
                     </div>
                   </div>
