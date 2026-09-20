@@ -133,7 +133,6 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState({ minutes: 15, seconds: 0 });
   const [recentBuyer, setRecentBuyer] = useState<any | null>(null);
 
-  // حالة للتحكم في إخفاء الزر العائم عند رؤية فورم الطلب
   const [isFormInView, setIsFormInView] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -308,7 +307,6 @@ export default function Home() {
   const activeProvince = activeCountry?.provinces.find((p) => p.id === selectedProvinceId);
   const shippingCost = activeProvince?.shippingCost || 0;
 
-  // استخراج الباقات النشطة والمفعلة فقط
   const activeBundles = (config.showBundles && config.bundles?.length > 0)
     ? config.bundles.filter((b) => b.enabled !== false)
     : [];
@@ -559,7 +557,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen font-sans pb-28" style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
-      {/* 1. الشريط الإعلاني العلوي */}
+      {/* 1. الشريط العلوي */}
       {config.showTopBar && (
         <div className="text-xs font-black py-2.5 text-center px-4 transition text-white" style={{ background: "var(--color-primary)" }}>
           {config.topBarText}
@@ -613,7 +611,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* 4. العداد التنازلي وشريط المخزون */}
+        {/* 4. العداد وشريط المخزون */}
         {(config.showTimer || config.showStockBar) && (
           <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             {config.showTimer && (
@@ -633,9 +631,17 @@ export default function Home() {
           </div>
         )}
 
-        {/* 5. تفاصيل السعر والاسم وعداد الكمية (مع ضبط حجم العنوان ومزامنة السعر) */}
+        {/* 5. تفاصيل السعر والاسم وعداد الكمية */}
         <div className="space-y-3">
-          <h1 className="text-lg sm:text-xl font-bold leading-snug tracking-normal" style={{ color: "var(--color-text, #111827)" }}>
+          <h1 
+            style={{ 
+              color: "var(--color-text, #111827)", 
+              fontSize: "18px", 
+              lineHeight: "1.4", 
+              fontWeight: "800",
+              margin: "6px 0"
+            }}
+          >
             {config.productTitle}
           </h1>
 
@@ -677,8 +683,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* شارات بناء الثقة السريعة (Trust Badges) */}
-        <div className="grid grid-cols-3 gap-2 py-2 border-y text-center text-[10px] sm:text-xs font-bold" style={{ borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}>
+        {/* شارات الثقة السريعة */}
+        <div className="grid grid-cols-3 gap-2 py-2.5 border-y text-center text-[10px] sm:text-xs font-bold" style={{ borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}>
           <div className="flex flex-col items-center gap-1 opacity-90">
             <span>🔍 معاينة قبل الدفع</span>
           </div>
@@ -690,7 +696,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 6. باقات التوفير (عرض الباقات المفعلة فقط) */}
+        {/* 6. باقات التوفير */}
         {activeBundles.length > 0 && (
           <div className="space-y-2">
             <label className="text-xs font-bold opacity-80" style={{ color: "var(--color-text, #111827)" }}>اختر العرض الأنسب لك:</label>
@@ -711,7 +717,7 @@ export default function Home() {
                       <input type="radio" checked={isSelected} readOnly style={{ accentColor: "var(--color-primary)" }} />
                       <div>
                         <p className="text-xs font-bold" style={{ color: "var(--color-text, #111827)" }}>{b.title}</p>
-                        {b.savings && <p className="text-[10px] text-emerald-500 font-bold">{b.savings}</p>}
+                        {b.savings && <p className="text-[10px] text-emerald-600 font-bold">{b.savings}</p>}
                       </div>
                     </div>
                     <div className="text-left">
@@ -725,7 +731,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 7. المقاسات والألوان الذكية للقطع */}
+        {/* 7. المقاسات والألوان */}
         {(enableSizes || enableColors) && (
           <div className="p-4 rounded-2xl space-y-4 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
@@ -743,7 +749,7 @@ export default function Home() {
                   {selectedQty > 1 && (
                     <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
                       <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-primary)" }} />
-                      <span className="text-xs font-bold text-white">تفاصيل القطعة {idx + 1}:</span>
+                      <span className="text-xs font-bold" style={{ color: "var(--color-text, #111827)" }}>تفاصيل القطعة {idx + 1}:</span>
                     </div>
                   )}
 
@@ -811,7 +817,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 8. قسم الفيديو المدمج */}
+        {/* 8. الفيديو المدمج */}
         {config.videoUrl && config.videoUrl.trim() !== "" && (
           <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: "var(--color-primary)" }}>
@@ -821,7 +827,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 9. معرض الصور التفصيلي مع الأوصاف */}
+        {/* 9. معرض الصور التفصيلي */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <div className="text-center space-y-1 pt-2">
@@ -855,7 +861,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 10. مميزات ومواصفات المنتج (ديناميكية بالكامل) */}
+        {/* 10. مميزات ومواصفات المنتج */}
         {config.features && config.features.length > 0 && (
           <div className="p-4 rounded-2xl space-y-2.5 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>مميزات ومواصفات المنتج:</h3>
@@ -870,7 +876,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 11. آراء وتقييمات العملاء (ديناميكية وواضحة الخطوط) */}
+        {/* 11. آراء وتقييمات العملاء */}
         {config.showReviews && config.reviews && config.reviews.length > 0 && (
           <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>آراء وتقييمات العملاء:</h3>
@@ -878,17 +884,17 @@ export default function Home() {
               {config.reviews.map((rev, idx) => (
                 <div key={idx} className="p-3 rounded-xl border space-y-1.5" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-white">{rev.name}</span>
-                    <span className="text-amber-400 font-bold">{"★".repeat(rev.rating || 5)}</span>
+                    <span className="font-bold" style={{ color: "var(--color-text, #111827)" }}>{rev.name}</span>
+                    <span className="text-amber-500 font-bold">{"★".repeat(rev.rating || 5)}</span>
                   </div>
-                  <p className="text-xs text-neutral-300 leading-relaxed">{rev.comment}</p>
+                  <p className="text-xs opacity-85 leading-relaxed" style={{ color: "var(--color-text, #111827)" }}>{rev.comment}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* 12. نموذج تسجيل الطلب (مع تفتيح الحقول ورفع التباين) */}
+        {/* 12. نموذج تسجيل الطلب */}
         <div 
           ref={formRef}
           id="order-form" 
@@ -912,54 +918,54 @@ export default function Home() {
             />
 
             <div>
-              <label className="block text-xs mb-1 font-bold text-neutral-200">الاسم بالكامل *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>الاسم بالكامل *</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="اكتب اسمك كاملاً"
-                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                className="w-full border rounded-xl p-3 text-xs placeholder:text-neutral-400 focus:outline-none transition font-medium"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 font-bold text-neutral-200">رقم الهاتف *</label>
+                <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>رقم الهاتف *</label>
                 <input
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="رقم الهاتف للتواصل"
-                  className="w-full border rounded-xl p-3 text-xs font-mono text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                  className="w-full border rounded-xl p-3 text-xs font-mono placeholder:text-neutral-400 focus:outline-none transition font-medium"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1 text-neutral-300">رقم هاتف بديل (اختياري)</label>
+                <label className="block text-xs mb-1 opacity-80 font-medium" style={{ color: "var(--color-text, #111827)" }}>رقم هاتف بديل (اختياري)</label>
                 <input
                   type="tel"
                   value={altPhone}
                   onChange={(e) => setAltPhone(e.target.value)}
                   placeholder="رقم احتياطي للمندوب"
-                  className="w-full border rounded-xl p-3 text-xs font-mono text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                  className="w-full border rounded-xl p-3 text-xs font-mono placeholder:text-neutral-400 focus:outline-none transition"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold text-neutral-200">المحافظة *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>المحافظة *</label>
               <select
                 value={selectedProvinceId}
                 onChange={(e) => setSelectedProvinceId(e.target.value)}
-                className="w-full border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                className="w-full border rounded-xl p-3 text-xs focus:outline-none transition font-bold"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               >
                 {activeCountry?.provinces.filter((p) => p.enabled).map((p) => (
-                  <option key={p.id} value={p.id} style={{ background: "var(--color-card)", color: "#FFFFFF" }}>
+                  <option key={p.id} value={p.id} style={{ background: "var(--color-card)", color: "var(--color-text, #111827)" }}>
                     {p.name} {p.shippingCost > 0 ? `(+${p.shippingCost} ${activeCountry.currency} شحن)` : "(شحن مجاني)"}
                   </option>
                 ))}
@@ -967,49 +973,55 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold text-neutral-200">تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
+              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
               <input
                 type="text"
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="المنطقة، اسم الشارع، رقم العقار أو علامة مميزة"
-                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                className="w-full border rounded-xl p-3 text-xs placeholder:text-neutral-400 focus:outline-none transition font-medium"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             <div>
-              <label className="block text-xs mb-1 text-neutral-300">ملاحظات إضافية (اختياري)</label>
+              <label className="block text-xs mb-1 opacity-80 font-medium" style={{ color: "var(--color-text, #111827)" }}>ملاحظات إضافية (اختياري)</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="أي تعليمات خاصة بموعد الاستلام"
-                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
+                className="w-full border rounded-xl p-3 text-xs placeholder:text-neutral-400 focus:outline-none transition"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
               />
             </div>
 
             {/* ملخص السعر */}
-            <div className="p-3.5 rounded-xl border space-y-2 text-xs" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
-              <div className="flex justify-between text-neutral-300">
+            <div 
+              className="p-3.5 rounded-xl border space-y-2 text-xs font-bold" 
+              style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+            >
+              <div className="flex justify-between opacity-85">
                 <span>سعر الطلب ({selectedQty} قطع):</span>
                 <span className="font-mono">{productPriceTotal} {activeCountry?.currency}</span>
               </div>
               {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-400 font-bold">
+                <div className="flex justify-between text-emerald-600">
                   <span>كوبون الخصم ({appliedCouponCode} - {appliedDiscount}%):</span>
                   <span className="font-mono">-{discountAmount} {activeCountry?.currency}</span>
                 </div>
               )}
-              <div className="flex justify-between text-neutral-300">
+              <div className="flex justify-between opacity-85">
                 <span>تكلفة الشحن:</span>
                 <span className="font-mono">
                   {shippingCost > 0 ? `${shippingCost} ${activeCountry?.currency}` : "مجاني"}
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-black border-t pt-2" style={{ borderColor: "var(--color-border)", color: "var(--color-primary)" }}>
+              <div 
+                className="flex justify-between text-sm font-black border-t pt-2" 
+                style={{ borderColor: "var(--color-border)", color: "var(--color-primary)" }}
+              >
                 <span>المجموع النهائي عند الاستلام:</span>
                 <span className="font-mono">{grandTotal} {activeCountry?.currency}</span>
               </div>
@@ -1030,7 +1042,7 @@ export default function Home() {
         {/* 13. صندوق الضمان والمعاينة */}
         {config.showGuarantee && (
           <div className="p-4 rounded-2xl text-center space-y-1 shadow-sm" style={{ background: "rgba(5, 150, 105, 0.1)", border: "1px solid rgba(5, 150, 105, 0.3)" }}>
-            <h4 className="text-xs font-bold text-emerald-500">{config.guaranteeText}</h4>
+            <h4 className="text-xs font-bold text-emerald-600">{config.guaranteeText}</h4>
             {config.guaranteeSubtext && <p className="text-[11px] opacity-80" style={{ color: "var(--color-text, #111827)" }}>{config.guaranteeSubtext}</p>}
           </div>
         )}
@@ -1061,7 +1073,7 @@ export default function Home() {
         </a>
       )}
 
-      {/* 16. الزر العائم السفلي (يختفي تلقائياً بمجرد الوصول للفورم لمنع التكرار) */}
+      {/* 16. الزر العائم السفلي */}
       {config.showStickyButton && !isFormInView && (
         <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3 shadow-lg transition-all duration-300 animate-fade-in" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
           <div>
