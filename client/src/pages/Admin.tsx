@@ -23,9 +23,11 @@ export interface GalleryItem {
 }
 
 export interface BundleItem {
+  id?: string;
   qty: number;
   title: string;
   price: number;
+  enabled?: boolean;
   badge?: string;
   savings?: string;
 }
@@ -60,7 +62,7 @@ export interface StoreConfig {
   productTitle: string;
   productImage: string;
   gallery: GalleryItem[];
-  videoUrl?: string; // رابط الفيديو (يوتيوب أو فيسبوك أو رابط مباشر)
+  videoUrl?: string;
   currentPrice: number;
   oldPrice: number;
   features: string[];
@@ -141,6 +143,12 @@ const DEFAULT_COUNTRIES: Record<string, CountryConfig> = {
   }
 };
 
+const DEFAULT_BUNDLES: BundleItem[] = [
+  { id: "b1", qty: 1, title: "قطعة واحدة", price: 320, enabled: true },
+  { id: "b2", qty: 2, title: "قطعتان (باقة التوفير)", price: 580, enabled: true, badge: "الأكثر طلباً", savings: "وفر 60 ج.م" },
+  { id: "b3", qty: 3, title: "3 قطع (عرض العائلة)", price: 790, enabled: false, badge: "أكبر توفير", savings: "وفر 170 ج.م" }
+];
+
 const DEFAULT_CONFIG: StoreConfig = {
   storeName: "متجر تجريبي",
   adminEmail: "admin@example.com",
@@ -162,32 +170,29 @@ const DEFAULT_CONFIG: StoreConfig = {
   supportWhatsappNumber: "",
   activeCountry: "EG",
   countries: DEFAULT_COUNTRIES,
-  productTitle: "اسم المنتج هنا",
-  productImage: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80",
+  productTitle: "سنيكرز إير كومفورت برو الطبي",
+  productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
   gallery: [],
   videoUrl: "",
-  currentPrice: 199,
-  oldPrice: 350,
+  currentPrice: 320,
+  oldPrice: 550,
   features: [
-    "خامات عالية الجودة وممتازة",
-    "ضمان معاينة وفحص قبل الاستلام",
-    "توصيل سريع حتى باب المنزل"
+    "خامات ممتازة ومرنة تمنح القدم تهوية وراحة تامة",
+    "نعل ممتص للصدمات ومقاوم للانزلاق في كل الأوقات",
+    "معاينة وقياس مجاني بالكامل قبل دفع أي مليم للمندوب"
   ],
-  enableSizes: false,
-  sizes: "41, 42, 43, 44",
-  enableColors: false,
-  colors: "أسود, أبيض, كحلي",
-  showBundles: false,
-  bundles: [
-    { qty: 1, title: "قطعة واحدة", price: 199 },
-    { qty: 2, title: "قطعتان (باقة التوفير)", price: 349, badge: "الأكثر طلباً", savings: "وفر 49" }
-  ],
+  enableSizes: true,
+  sizes: "41, 42, 43, 44, 45",
+  enableColors: true,
+  colors: "أسود, كحلي, رمادي, أصفر",
+  showBundles: true,
+  bundles: DEFAULT_BUNDLES,
   showGuarantee: true,
   guaranteeText: "معاينة مجانية كاملة عند باب منزلك قبل السداد",
-  guaranteeSubtext: "يحق لك فحص الجودة وتجربة المنتج مع المندوب دون أي التزام",
+  guaranteeSubtext: "يحق لك فحص الجودة وتجربة المقاس مع المندوب دون أي التزام",
   showReviews: true,
   reviews: [
-    { name: "عميل موثق", comment: "منتج ممتاز وخامة ممتازة وسرعة في التوصيل.", rating: 5 }
+    { name: "محمود س.", comment: "ممتاز جداً وخامته مريحة ومطابق للوصف بالظبط.", rating: 5 }
   ],
   whatsappNumber: "",
   metaPixelId: "",
@@ -224,6 +229,11 @@ export default function Admin() {
   const [newCountryCurrency, setNewCountryCurrency] = useState("");
   const [newCountryPhoneCode, setNewCountryPhoneCode] = useState("");
 
+  // حالات جديدة لإضافة آراء العملاء
+  const [newReviewName, setNewReviewName] = useState("");
+  const [newReviewComment, setNewReviewComment] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(5);
+
   const fetchCloudOrders = (token?: string) => {
     const currentToken = token || sessionStorage.getItem("admin_token");
     if (!currentToken) return;
@@ -246,11 +256,26 @@ export default function Admin() {
       .then((res) => res.json())
       .then((cloudData) => {
         if (cloudData && Object.keys(cloudData).length > 0) {
+          const loadedBundles = (cloudData.bundles && cloudData.bundles.length > 0)
+            ? cloudData.bundles.map((b: any, idx: number) => ({
+                id: b.id || `b_${idx}_${Date.now()}`,
+                qty: Number(b.qty) || 1,
+                title: b.title || `باقة ${b.qty} قطع`,
+                price: Number(b.price) || 0,
+                enabled: b.enabled !== undefined ? b.enabled : true,
+                badge: b.badge || "",
+                savings: b.savings || ""
+              }))
+            : DEFAULT_BUNDLES;
+
           setConfig({
             ...DEFAULT_CONFIG,
             ...cloudData,
             adminPassword: "",
             gallery: cloudData.gallery || [],
+            features: cloudData.features || DEFAULT_CONFIG.features,
+            reviews: cloudData.reviews || DEFAULT_CONFIG.reviews,
+            bundles: loadedBundles,
             countries: { ...DEFAULT_COUNTRIES, ...(cloudData.countries || {}) }
           });
         }
@@ -308,7 +333,6 @@ export default function Admin() {
       payload.adminPassword = newPassword;
     }
 
-    // حفظ الثيم المختار محلياً أيضاً
     localStorage.setItem("store_theme_id", config.selectedTheme);
 
     try {
@@ -432,6 +456,25 @@ export default function Admin() {
     alert(`تمت إضافة دولة (${newCountryObj.name}) بنجاح!`);
   };
 
+  const handleAddReview = () => {
+    if (!newReviewName.trim() || !newReviewComment.trim()) {
+      alert("يرجى إدخال اسم العميل والتعليق أولاً");
+      return;
+    }
+    const newRev: ReviewItem = {
+      name: newReviewName.trim(),
+      comment: newReviewComment.trim(),
+      rating: Number(newReviewRating) || 5
+    };
+    setConfig({
+      ...config,
+      reviews: [...(config.reviews || []), newRev]
+    });
+    setNewReviewName("");
+    setNewReviewComment("");
+    setNewReviewRating(5);
+  };
+
   const exportToCSV = () => {
     if (orders.length === 0) return alert("لا توجد طلبات لتصديرها");
     const headers = ["معرف الطلب", "التاريخ والوقت", "الاسم", "الهاتف", "المحافظة", "العنوان", "الكمية", "تفاصيل المقاسات والألوان", "الإجمالي", "الحالة"];
@@ -535,8 +578,8 @@ export default function Admin() {
 
         <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
-            { id: "product", name: "المنتج والصور والفيديو" },
-            { id: "marketing_tools", name: "أدوات الترويج والخصم" },
+            { id: "product", name: "المنتج والصور والمميزات" },
+            { id: "marketing_tools", name: "باقات العروض والترويج" },
             { id: "themes", name: `ثيمات المتجر (10 ثيمات)` },
             { id: "shipping", name: "الدول والشحن" },
             { id: "pixels", name: "البيكسل و CAPI" },
@@ -549,28 +592,46 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* 1. تبويب المنتج والصور والفيديو والمعرض */}
+        {/* 1. تبويب المنتج والصور والفيديو والمعرض والمميزات */}
         {activeTab === "product" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">بيانات المنتج وتفاصيل العرض</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">اسم المتجر</label>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">اسم المتجر</label>
                 <input type="text" value={config.storeName} onChange={(e) => setConfig({ ...config, storeName: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs sm:text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">عنوان المنتج الرئيسي</label>
+                <label className="block text-xs text-neutral-400 mb-1 font-bold">عنوان المنتج الرئيسي</label>
                 <input type="text" value={config.productTitle} onChange={(e) => setConfig({ ...config, productTitle: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs sm:text-sm font-bold" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">السعر الحالي</label>
+                  <label className="block text-xs text-neutral-400 mb-1 font-bold">السعر الأساسي للقطعة</label>
                   <input type="number" value={config.currentPrice} onChange={(e) => setConfig({ ...config, currentPrice: Number(e.target.value) })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm font-bold text-amber-400" />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">السعر القديم المشطوب</label>
+                  <label className="block text-xs text-neutral-400 mb-1 font-bold">السعر القديم المشطوب</label>
                   <input type="number" value={config.oldPrice} onChange={(e) => setConfig({ ...config, oldPrice: Number(e.target.value) })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm" />
                 </div>
+              </div>
+
+              {/* حقل مميزات ومواصفات المنتج */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs text-amber-400 font-bold">مميزات ومواصفات المنتج (تظهر كنقاط في الصفحة)</label>
+                  <span className="text-[10px] text-neutral-500">اكتب كل ميزة في سطر منفصل</span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={config.features?.join("\n") || ""}
+                  onChange={(e) => {
+                    const lines = e.target.value.split("\n");
+                    setConfig({ ...config, features: lines });
+                  }}
+                  placeholder="خامات ممتازة ومرنة تمنح القدم تهوية&#10;نعل ممتص للصدمات ومقاوم للانزلاق&#10;معاينة وقياس مجاني بالكامل قبل الدفع"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-neutral-200 leading-relaxed focus:border-amber-500 outline-none"
+                />
               </div>
 
               {/* الصورة الرئيسية */}
@@ -590,7 +651,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* حقل فيديو المنتج (فيسبوك، يوتيوب، أو MP4) */}
+              {/* فيديو المنتج */}
               <div className="space-y-2 border-t border-neutral-800 pt-4">
                 <div className="flex justify-between items-center">
                   <label className="block text-xs text-amber-400 font-bold">رابط فيديو المنتج (اختياري - فيسبوك أو يوتيوب)</label>
@@ -605,7 +666,7 @@ export default function Admin() {
                 />
               </div>
 
-              {/* معرض الصور الإضافية مع الوصف الاختياري تحت كل صورة */}
+              {/* معرض الصور التفصيلي */}
               <div className="space-y-3 border-t border-neutral-800 pt-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -671,7 +732,7 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* المقاسات والألوان الذكية ومفاتيح التفعيل */}
+              {/* المقاسات والألوان */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-800 pt-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -692,12 +753,227 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 2. تبويب أدوات الترويج والعداد وكوبون الخصم عند الخروج */}
+        {/* 2. تبويب باقات العروض وأدوات التحفيز وتقييمات العملاء */}
         {activeTab === "marketing_tools" && (
           <div className="space-y-6 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
-            <h2 className="font-bold text-base text-amber-400">التحكم في عناصر التحفيز ونوافذ الخصم</h2>
+            <h2 className="font-bold text-base text-amber-400">باقات العروض وأدوات التحفيز والمبيعات</h2>
 
-            {/* نافذة الخصم عند الخروج (Exit-Intent Popup) */}
+            {/* نظام تخصيص الباقات المرن (Custom Bundles) */}
+            <div className="bg-neutral-950 border border-amber-500/30 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-amber-400 block">نظام باقات العروض (قطعة، قطعتين، 3 قطع)</label>
+                  <span className="text-[10px] text-neutral-400">تحكم كامل في تفعيل كل باقة وسعرها الفردي وشارتها الترويجية</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={config.showBundles} 
+                  onChange={(e) => setConfig({ ...config, showBundles: e.target.checked })} 
+                  className="w-4 h-4 accent-amber-500" 
+                />
+              </div>
+
+              {config.showBundles && (
+                <div className="space-y-3 pt-3 border-t border-neutral-800">
+                  {config.bundles?.map((bundle, bIdx) => (
+                    <div key={bundle.id || bIdx} className="bg-neutral-900/90 border border-neutral-800 p-3.5 rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={bundle.enabled !== false}
+                            onChange={(e) => {
+                              const updated = config.bundles.map((b, i) => i === bIdx ? { ...b, enabled: e.target.checked } : b);
+                              setConfig({ ...config, bundles: updated });
+                            }}
+                            className="w-4 h-4 accent-amber-500"
+                          />
+                          <span className="text-xs font-bold text-neutral-200">
+                            {bundle.title || `باقة ${bundle.qty} قطع`}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = config.bundles.filter((_, i) => i !== bIdx);
+                            setConfig({ ...config, bundles: updated });
+                          }}
+                          className="text-red-400 hover:text-red-300 text-[11px]"
+                        >
+                          حذف الباقة ✕
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">الكمية (قطع)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={bundle.qty}
+                            onChange={(e) => {
+                              const updated = config.bundles.map((b, i) => i === bIdx ? { ...b, qty: Number(e.target.value) } : b);
+                              setConfig({ ...config, bundles: updated });
+                            }}
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-center font-bold text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">عنوان الباقة</label>
+                          <input
+                            type="text"
+                            value={bundle.title}
+                            onChange={(e) => {
+                              const updated = config.bundles.map((b, i) => i === bIdx ? { ...b, title: e.target.value } : b);
+                              setConfig({ ...config, bundles: updated });
+                            }}
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">السعر الإجمالي للباقة</label>
+                          <input
+                            type="number"
+                            value={bundle.price}
+                            onChange={(e) => {
+                              const updated = config.bundles.map((b, i) => i === bIdx ? { ...b, price: Number(e.target.value) } : b);
+                              setConfig({ ...config, bundles: updated });
+                            }}
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-center font-bold text-amber-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">شارة الباقة (Badge)</label>
+                          <input
+                            type="text"
+                            value={bundle.badge || ""}
+                            placeholder="الأكثر طلباً"
+                            onChange={(e) => {
+                              const updated = config.bundles.map((b, i) => i === bIdx ? { ...b, badge: e.target.value } : b);
+                              setConfig({ ...config, bundles: updated });
+                            }}
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextQty = (config.bundles?.length || 0) + 1;
+                      const newB: BundleItem = {
+                        id: `b_${Date.now()}`,
+                        qty: nextQty,
+                        title: `${nextQty} قطع (عرض خاص)`,
+                        price: (config.currentPrice || 300) * nextQty - 50,
+                        enabled: true,
+                        badge: "عرض جديد",
+                        savings: "توفير إضافي"
+                      };
+                      setConfig({ ...config, bundles: [...(config.bundles || []), newB] });
+                    }}
+                    className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold rounded-xl border border-amber-500/30 transition"
+                  >
+                    + إضافة باقة عرض جديدة
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* قسم إدارة آراء وتقييمات العملاء */}
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-white block">قسم آراء وتقييمات العملاء (Social Proof)</label>
+                  <span className="text-[10px] text-neutral-400">إظهار تجارب وتقييمات المشترين السابقة لزيادة الثقة</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={config.showReviews} 
+                  onChange={(e) => setConfig({ ...config, showReviews: e.target.checked })} 
+                  className="w-4 h-4 accent-amber-500" 
+                />
+              </div>
+
+              {config.showReviews && (
+                <div className="space-y-3 pt-3 border-t border-neutral-800">
+                  {/* قائمة التقييمات الحالية */}
+                  {config.reviews && config.reviews.length > 0 ? (
+                    <div className="space-y-2">
+                      {config.reviews.map((rev, rIdx) => (
+                        <div key={rIdx} className="flex items-start justify-between bg-neutral-900 p-3 rounded-xl border border-neutral-800 text-xs">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white">{rev.name}</span>
+                              <span className="text-amber-400">{"★".repeat(rev.rating)}</span>
+                            </div>
+                            <p className="text-neutral-300 mt-1">{rev.comment}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = config.reviews.filter((_, i) => i !== rIdx);
+                              setConfig({ ...config, reviews: updated });
+                            }}
+                            className="text-red-400 hover:text-red-300 text-xs p-1"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-500 text-center py-2">لا توجد تقييمات مضافة حالياً.</p>
+                  )}
+
+                  {/* إضافة تقييم جديد */}
+                  <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-800 space-y-2">
+                    <span className="text-xs font-bold text-amber-400 block">+ إضافة تقييم عميل جديد</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="اسم العميل (مثال: أحمد م.)"
+                        value={newReviewName}
+                        onChange={(e) => setNewReviewName(e.target.value)}
+                        className="bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="نص التقييم والتجربة"
+                        value={newReviewComment}
+                        onChange={(e) => setNewReviewComment(e.target.value)}
+                        className="sm:col-span-2 bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-xs text-white"
+                      />
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] text-neutral-400">التقييم:</label>
+                        <select
+                          value={newReviewRating}
+                          onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                          className="bg-neutral-950 border border-neutral-800 text-xs rounded-lg p-1.5 text-amber-400 font-bold"
+                        >
+                          <option value="5">★★★★★ (5 نجوم)</option>
+                          <option value="4">★★★★☆ (4 نجوم)</option>
+                          <option value="3">★★★☆☆ (3 نجوم)</option>
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddReview}
+                        className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-1.5 rounded-lg text-xs font-bold transition"
+                      >
+                        إضافة التقييم
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* نافذة الخصم عند الخروج */}
             <div className="bg-neutral-950 border border-amber-500/30 p-4 rounded-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -758,7 +1034,7 @@ export default function Admin() {
               )}
             </div>
 
-            {/* العداد التنازلي وشريط المخزون */}
+            {/* العداد وشريط المخزون */}
             <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -789,18 +1065,7 @@ export default function Admin() {
               )}
             </div>
 
-            {/* باقات العروض (Bundles) */}
-            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-xs font-bold text-white block">باقات العروض والكميات (قطعة، قطعتين، 3 قطع)</label>
-                  <span className="text-[10px] text-neutral-400">إذا عطلتها، سيتحكم العميل بالكمية عبر عداد (+ / -) بالسعر الأساسي</span>
-                </div>
-                <input type="checkbox" checked={config.showBundles} onChange={(e) => setConfig({ ...config, showBundles: e.target.checked })} className="w-4 h-4 accent-amber-500" />
-              </div>
-            </div>
-
-            {/* الشحن المجاني والمعاينة */}
+            {/* شارات الضمان والمعاينة */}
             <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -822,7 +1087,7 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* الشريط العلوي وإشعارات الشراء اللحظية */}
+            {/* الشريط الإعلاني وإشعارات الشراء */}
             <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -846,7 +1111,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 3. تبويب الـ 10 ثيمات التخصصية الكاملة */}
+        {/* 3. تبويب الـ 10 ثيمات */}
         {activeTab === "themes" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="border-b border-neutral-800 pb-3">
@@ -1009,7 +1274,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 5. تبويب الواتساب والبيكسل و CAPI */}
+        {/* 5. تبويب البيكسلات والتتبع */}
         {activeTab === "pixels" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <h2 className="font-bold text-base text-amber-400">أرقام الواتساب وبيكسلات التتبع (CAPI)</h2>
@@ -1030,7 +1295,6 @@ export default function Admin() {
 
               <div className="border-t border-neutral-800 pt-4 space-y-3">
                 <h3 className="text-xs font-bold text-neutral-300">أكواد البيكسل و Meta Conversions API (CAPI)</h3>
-                
                 <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 space-y-2.5">
                   <div>
                     <label className="block text-xs text-neutral-300 mb-1 font-bold">Meta Pixel ID (المتصفح)</label>
@@ -1107,7 +1371,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 7. تبويب الطلبات السحابية مع التوقيت المنسق */}
+        {/* 7. تبويب الطلبات السحابية */}
         {activeTab === "orders" && (
           <div className="space-y-4 bg-neutral-900/60 border border-neutral-800 p-5 rounded-2xl">
             <div className="flex flex-wrap justify-between items-center gap-3">
@@ -1166,7 +1430,6 @@ export default function Admin() {
                     </div>
                     <p className="text-neutral-400">العنوان: {ord.governorate} — {ord.address}</p>
                     
-                    {/* عرض تفاصيل القطع والمقاسات والألوان */}
                     <div className="bg-neutral-900/70 p-2.5 rounded-lg border border-neutral-800/80 space-y-1">
                       <div className="text-amber-400 font-bold text-[11px]">الكمية المطلوبة: {ord.qty || 1}</div>
                       {ord.itemsBreakdown ? (
