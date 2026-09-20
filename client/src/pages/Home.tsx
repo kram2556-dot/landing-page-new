@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { parseColors, parseSizes } from "../const";
 
@@ -18,9 +18,11 @@ export interface CountryConfig {
 }
 
 export interface BundleItem {
+  id?: string;
   qty: number;
   title: string;
   price: number;
+  enabled?: boolean;
   badge?: string;
   savings?: string;
 }
@@ -131,15 +133,31 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState({ minutes: 15, seconds: 0 });
   const [recentBuyer, setRecentBuyer] = useState<any | null>(null);
 
+  // حالة للتحكم في إخفاء الزر العائم عند رؤية فورم الطلب
+  const [isFormInView, setIsFormInView] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+
   const enableColors = config ? (localStorage.getItem("store_enable_colors") !== "false" && config.enableColors !== false) : true;
-  const colorsRaw = localStorage.getItem("store_colors_input") || config?.colors || "اسود, احمر, كحلي";
+  const colorsRaw = localStorage.getItem("store_colors_input") || config?.colors || "أسود, كحلي, رمادي";
   const parsedColorsList = parseColors(colorsRaw);
 
   const enableSizes = config ? (localStorage.getItem("store_enable_sizes") !== "false" && config.enableSizes !== false) : true;
-  const sizesRaw = localStorage.getItem("store_sizes_input") || config?.sizes || "40, 41, 42, 43, 44";
+  const sizesRaw = localStorage.getItem("store_sizes_input") || config?.sizes || "41, 42, 43, 44, 45";
   const parsedSizesList = parseSizes(sizesRaw);
 
   const ctaButtonText = localStorage.getItem("store_cta_text") || config?.ctaButtonText || "اطلب الآن والدفع عند الاستلام";
+
+  useEffect(() => {
+    if (!formRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsFormInView(entry.isIntersecting);
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(formRef.current);
+    return () => observer.disconnect();
+  }, [config]);
 
   useEffect(() => {
     if (!config) return;
@@ -290,9 +308,14 @@ export default function Home() {
   const activeProvince = activeCountry?.provinces.find((p) => p.id === selectedProvinceId);
   const shippingCost = activeProvince?.shippingCost || 0;
 
+  // استخراج الباقات النشطة والمفعلة فقط
+  const activeBundles = (config.showBundles && config.bundles?.length > 0)
+    ? config.bundles.filter((b) => b.enabled !== false)
+    : [];
+
   let productPriceTotal = config.currentPrice * selectedQty;
-  if (config.showBundles && config.bundles?.length > 0) {
-    const matchedBundle = config.bundles.find((b) => b.qty === selectedQty);
+  if (activeBundles.length > 0) {
+    const matchedBundle = activeBundles.find((b) => b.qty === selectedQty);
     if (matchedBundle) {
       productPriceTotal = matchedBundle.price;
     }
@@ -536,14 +559,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen font-sans pb-28" style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
-      {/* 1. الشريط العلوي */}
+      {/* 1. الشريط الإعلاني العلوي */}
       {config.showTopBar && (
         <div className="text-xs font-black py-2.5 text-center px-4 transition text-white" style={{ background: "var(--color-primary)" }}>
           {config.topBarText}
         </div>
       )}
 
-      {/* 2. ترويسة المتجر متوافقة بالكامل مع لون الثيم */}
+      {/* 2. ترويسة المتجر */}
       <header className="border-b sticky top-0 z-40 px-4 py-3 backdrop-blur shadow-sm" style={{ borderColor: "var(--color-border)", background: "var(--color-card, #FFFFFF)" }}>
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -590,7 +613,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* 4. العداد وشريط المخزون */}
+        {/* 4. العداد التنازلي وشريط المخزون */}
         {(config.showTimer || config.showStockBar) && (
           <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             {config.showTimer && (
@@ -610,19 +633,20 @@ export default function Home() {
           </div>
         )}
 
-        {/* 5. تفاصيل السعر والاسم وعداد الكمية (مع تصحيح وضوح العنوان) */}
+        {/* 5. تفاصيل السعر والاسم وعداد الكمية (مع ضبط حجم العنوان ومزامنة السعر) */}
         <div className="space-y-3">
-          <h1 className="text-lg sm:text-xl font-black leading-snug" style={{ color: "var(--color-text, #111827)" }}>
+          <h1 className="text-lg sm:text-xl font-bold leading-snug tracking-normal" style={{ color: "var(--color-text, #111827)" }}>
             {config.productTitle}
           </h1>
+
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-baseline gap-3">
               <span className="text-2xl font-black font-mono" style={{ color: "var(--color-primary)" }}>
-                {config.currentPrice} {activeCountry?.currency}
+                {productPriceTotal} {activeCountry?.currency}
               </span>
               {config.oldPrice > config.currentPrice && (
                 <span className="text-xs opacity-50 line-through font-mono" style={{ color: "var(--color-text, #111827)" }}>
-                  {config.oldPrice} {activeCountry?.currency}
+                  {config.oldPrice * selectedQty} {activeCountry?.currency}
                 </span>
               )}
             </div>
@@ -653,12 +677,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 6. باقات التوفير */}
-        {config.showBundles && config.bundles?.length > 0 && (
+        {/* شارات بناء الثقة السريعة (Trust Badges) */}
+        <div className="grid grid-cols-3 gap-2 py-2 border-y text-center text-[10px] sm:text-xs font-bold" style={{ borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}>
+          <div className="flex flex-col items-center gap-1 opacity-90">
+            <span>🔍 معاينة قبل الدفع</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 opacity-90 border-x" style={{ borderColor: "var(--color-border)" }}>
+            <span>🚚 شحن سريع للمنزل</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 opacity-90">
+            <span>🛡️ استبدال مجاني</span>
+          </div>
+        </div>
+
+        {/* 6. باقات التوفير (عرض الباقات المفعلة فقط) */}
+        {activeBundles.length > 0 && (
           <div className="space-y-2">
             <label className="text-xs font-bold opacity-80" style={{ color: "var(--color-text, #111827)" }}>اختر العرض الأنسب لك:</label>
             <div className="space-y-2">
-              {config.bundles.map((b) => {
+              {activeBundles.map((b) => {
                 const isSelected = selectedQty === b.qty;
                 return (
                   <div
@@ -688,7 +725,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 7. المقاسات والألوان */}
+        {/* 7. المقاسات والألوان الذكية للقطع */}
         {(enableSizes || enableColors) && (
           <div className="p-4 rounded-2xl space-y-4 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
@@ -702,15 +739,18 @@ export default function Home() {
 
             <div className="space-y-3">
               {itemsSelections.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl border space-y-2.5" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
+                <div key={idx} className="p-3.5 rounded-xl border space-y-3" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
                   {selectedQty > 1 && (
-                    <span className="text-xs font-bold block" style={{ color: "var(--color-primary)" }}>تفاصيل القطعة {idx + 1}:</span>
+                    <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: "var(--color-border)" }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-primary)" }} />
+                      <span className="text-xs font-bold text-white">تفاصيل القطعة {idx + 1}:</span>
+                    </div>
                   )}
 
-                  {/* اختيار المقاس */}
+                  {/* المقاس */}
                   {enableSizes && parsedSizesList.length > 0 && (
                     <div className="space-y-1.5">
-                      <span className="text-[11px] opacity-75 font-bold block" style={{ color: "var(--color-text, #111827)" }}>المقاس:</span>
+                      <span className="text-[11px] opacity-85 font-bold block" style={{ color: "var(--color-text, #111827)" }}>المقاس:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {parsedSizesList.map((val) => {
                           const isSelected = item.size === val;
@@ -734,10 +774,10 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* اختيار اللون */}
+                  {/* اللون */}
                   {enableColors && parsedColorsList.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] opacity-75 font-bold block" style={{ color: "var(--color-text, #111827)" }}>اللون:</span>
+                      <span className="text-[11px] opacity-85 font-bold block" style={{ color: "var(--color-text, #111827)" }}>اللون:</span>
                       <div className="flex flex-wrap gap-2">
                         {parsedColorsList.map((color) => {
                           const isSelected = item.color === color.name;
@@ -771,7 +811,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 8. قسم الفيديو المدمج (فيسبوك أو يوتيوب أو MP4) */}
+        {/* 8. قسم الفيديو المدمج */}
         {config.videoUrl && config.videoUrl.trim() !== "" && (
           <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: "var(--color-primary)" }}>
@@ -781,7 +821,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 9. معرض الصور التفصيلي مع الوصف المكتوب تحت كل صورة */}
+        {/* 9. معرض الصور التفصيلي مع الأوصاف */}
         {config.gallery && config.gallery.length > 0 && (
           <div className="space-y-4">
             <div className="text-center space-y-1 pt-2">
@@ -815,44 +855,52 @@ export default function Home() {
           </div>
         )}
 
-        {/* 10. مميزات ومواصفات المنتج */}
-        {config.features?.length > 0 && (
+        {/* 10. مميزات ومواصفات المنتج (ديناميكية بالكامل) */}
+        {config.features && config.features.length > 0 && (
           <div className="p-4 rounded-2xl space-y-2.5 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>مميزات ومواصفات المنتج:</h3>
-            <ul className="space-y-1.5 text-xs opacity-90 list-disc list-inside" style={{ color: "var(--color-text, #111827)" }}>
+            <ul className="space-y-2 text-xs opacity-95 list-none pr-1" style={{ color: "var(--color-text, #111827)" }}>
               {config.features.map((feat, idx) => (
-                <li key={idx}>{feat}</li>
+                <li key={idx} className="flex items-start gap-2">
+                  <span style={{ color: "var(--color-primary)" }}>•</span>
+                  <span>{feat}</span>
+                </li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* 11. آراء وتقييمات العملاء */}
-        {config.showReviews && config.reviews?.length > 0 && (
+        {/* 11. آراء وتقييمات العملاء (ديناميكية وواضحة الخطوط) */}
+        {config.showReviews && config.reviews && config.reviews.length > 0 && (
           <div className="p-4 rounded-2xl space-y-3 shadow-sm" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
             <h3 className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>آراء وتقييمات العملاء:</h3>
             <div className="space-y-2.5">
               {config.reviews.map((rev, idx) => (
-                <div key={idx} className="p-3 rounded-xl border space-y-1" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
+                <div key={idx} className="p-3 rounded-xl border space-y-1.5" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold" style={{ color: "var(--color-text, #111827)" }}>{rev.name}</span>
-                    <span className="text-amber-500 font-bold">{"★".repeat(rev.rating || 5)}</span>
+                    <span className="font-bold text-white">{rev.name}</span>
+                    <span className="text-amber-400 font-bold">{"★".repeat(rev.rating || 5)}</span>
                   </div>
-                  <p className="text-[11px] opacity-75" style={{ color: "var(--color-text, #111827)" }}>{rev.comment}</p>
+                  <p className="text-xs text-neutral-300 leading-relaxed">{rev.comment}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* 12. استمارة تسجيل الطلب السريعة */}
-        <div id="order-form" className="p-5 rounded-3xl space-y-4 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+        {/* 12. نموذج تسجيل الطلب (مع تفتيح الحقول ورفع التباين) */}
+        <div 
+          ref={formRef}
+          id="order-form" 
+          className="p-5 rounded-3xl space-y-4 shadow-xl" 
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+        >
           <div className="border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
             <h2 className="text-base font-black" style={{ color: "var(--color-primary)" }}>بيانات التوصيل والشحن للمنزل</h2>
             <p className="text-[11px] opacity-70" style={{ color: "var(--color-text, #111827)" }}>الدفع نقداً عند استلام وفحص المنتج أمام المندوب</p>
           </div>
 
-          <form onSubmit={handleSubmitOrder} className="space-y-3">
+          <form onSubmit={handleSubmitOrder} className="space-y-3.5">
             <input
               type="text"
               name="website_hp_field"
@@ -864,54 +912,54 @@ export default function Home() {
             />
 
             <div>
-              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>الاسم بالكامل *</label>
+              <label className="block text-xs mb-1 font-bold text-neutral-200">الاسم بالكامل *</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="اكتب اسمك كاملاً"
-                className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>رقم الهاتف *</label>
+                <label className="block text-xs mb-1 font-bold text-neutral-200">رقم الهاتف *</label>
                 <input
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="رقم الهاتف للتواصل"
-                  className="w-full border rounded-xl p-3 text-xs font-mono focus:outline-none"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                  className="w-full border rounded-xl p-3 text-xs font-mono text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
                 />
               </div>
               <div>
-                <label className="block text-xs opacity-75 mb-1" style={{ color: "var(--color-text, #111827)" }}>رقم هاتف بديل (اختياري)</label>
+                <label className="block text-xs mb-1 text-neutral-300">رقم هاتف بديل (اختياري)</label>
                 <input
                   type="tel"
                   value={altPhone}
                   onChange={(e) => setAltPhone(e.target.value)}
                   placeholder="رقم احتياطي للمندوب"
-                  className="w-full border rounded-xl p-3 text-xs font-mono focus:outline-none"
-                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                  className="w-full border rounded-xl p-3 text-xs font-mono text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>المحافظة *</label>
+              <label className="block text-xs mb-1 font-bold text-neutral-200">المحافظة *</label>
               <select
                 value={selectedProvinceId}
                 onChange={(e) => setSelectedProvinceId(e.target.value)}
-                className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                className="w-full border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
               >
                 {activeCountry?.provinces.filter((p) => p.enabled).map((p) => (
-                  <option key={p.id} value={p.id} style={{ background: "var(--color-card)", color: "var(--color-text, #111827)" }}>
+                  <option key={p.id} value={p.id} style={{ background: "var(--color-card)", color: "#FFFFFF" }}>
                     {p.name} {p.shippingCost > 0 ? `(+${p.shippingCost} ${activeCountry.currency} شحن)` : "(شحن مجاني)"}
                   </option>
                 ))}
@@ -919,43 +967,43 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-xs mb-1 font-bold" style={{ color: "var(--color-text, #111827)" }}>تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
+              <label className="block text-xs mb-1 font-bold text-neutral-200">تفاصيل العنوان (الشارع / رقم العقار / علامة مميزة) *</label>
               <input
                 type="text"
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="المنطقة، اسم الشارع، رقم العقار أو علامة مميزة"
-                className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
               />
             </div>
 
             <div>
-              <label className="block text-xs opacity-70 mb-1" style={{ color: "var(--color-text, #111827)" }}>ملاحظات إضافية (اختياري)</label>
+              <label className="block text-xs mb-1 text-neutral-300">ملاحظات إضافية (اختياري)</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="أي تعليمات خاصة بموعد الاستلام"
-                className="w-full border rounded-xl p-3 text-xs focus:outline-none"
-                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text, #111827)" }}
+                className="w-full border rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-amber-500 transition"
+                style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}
               />
             </div>
 
             {/* ملخص السعر */}
-            <div className="p-3.5 rounded-xl border space-y-1.5 text-xs" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
-              <div className="flex justify-between opacity-75" style={{ color: "var(--color-text, #111827)" }}>
+            <div className="p-3.5 rounded-xl border space-y-2 text-xs" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
+              <div className="flex justify-between text-neutral-300">
                 <span>سعر الطلب ({selectedQty} قطع):</span>
                 <span className="font-mono">{productPriceTotal} {activeCountry?.currency}</span>
               </div>
               {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-bold">
+                <div className="flex justify-between text-emerald-400 font-bold">
                   <span>كوبون الخصم ({appliedCouponCode} - {appliedDiscount}%):</span>
                   <span className="font-mono">-{discountAmount} {activeCountry?.currency}</span>
                 </div>
               )}
-              <div className="flex justify-between opacity-75" style={{ color: "var(--color-text, #111827)" }}>
+              <div className="flex justify-between text-neutral-300">
                 <span>تكلفة الشحن:</span>
                 <span className="font-mono">
                   {shippingCost > 0 ? `${shippingCost} ${activeCountry?.currency}` : "مجاني"}
@@ -967,10 +1015,11 @@ export default function Home() {
               </div>
             </div>
 
+            {/* زر تأكيد الطلب المدمج */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full font-black py-4 rounded-xl text-base shadow-xl transition disabled:opacity-50 text-white cursor-pointer"
+              className="w-full font-black py-4 rounded-xl text-base shadow-xl transition disabled:opacity-50 text-white cursor-pointer hover:brightness-110 active:scale-[0.99]"
               style={{ background: "var(--color-primary)" }}
             >
               {isSubmitting ? "جاري تسجيل الطلب..." : `${ctaButtonText} 🛍️`}
@@ -978,11 +1027,11 @@ export default function Home() {
           </form>
         </div>
 
-        {/* 13. قسم الضمان */}
+        {/* 13. صندوق الضمان والمعاينة */}
         {config.showGuarantee && (
           <div className="p-4 rounded-2xl text-center space-y-1 shadow-sm" style={{ background: "rgba(5, 150, 105, 0.1)", border: "1px solid rgba(5, 150, 105, 0.3)" }}>
-            <h4 className="text-xs font-bold text-emerald-600">{config.guaranteeText}</h4>
-            {config.guaranteeSubtext && <p className="text-[11px] opacity-75" style={{ color: "var(--color-text, #111827)" }}>{config.guaranteeSubtext}</p>}
+            <h4 className="text-xs font-bold text-emerald-500">{config.guaranteeText}</h4>
+            {config.guaranteeSubtext && <p className="text-[11px] opacity-80" style={{ color: "var(--color-text, #111827)" }}>{config.guaranteeSubtext}</p>}
           </div>
         )}
       </main>
@@ -998,13 +1047,13 @@ export default function Home() {
         </div>
       )}
 
-      {/* 15. زر الدعم الفني العائم لواتساب */}
+      {/* 15. زر واتساب الدعم الفني */}
       {config.showSupportWhatsapp && config.supportWhatsappNumber && (
         <a
           href={`https://wa.me/${config.supportWhatsappNumber.replace(/[^0-9]/g, "")}`}
           target="_blank"
           rel="noreferrer"
-          className="fixed bottom-20 right-4 z-50 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl text-2xl transition"
+          className="fixed bottom-20 right-4 z-50 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl text-2xl transition hover:scale-110"
           style={{ background: "#25D366" }}
           title="تواصل مع الدعم الفني"
         >
@@ -1012,16 +1061,16 @@ export default function Home() {
         </a>
       )}
 
-      {/* 16. زر الشراء العائم للموبايل */}
-      {config.showStickyButton && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3 shadow-lg" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+      {/* 16. الزر العائم السفلي (يختفي تلقائياً بمجرد الوصول للفورم لمنع التكرار) */}
+      {config.showStickyButton && !isFormInView && (
+        <div className="fixed bottom-0 left-0 right-0 p-3 backdrop-blur border-t z-40 max-w-2xl mx-auto flex items-center justify-between gap-3 shadow-lg transition-all duration-300 animate-fade-in" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
           <div>
             <span className="text-[10px] opacity-70 block" style={{ color: "var(--color-text, #111827)" }}>الإجمالي:</span>
             <span className="text-base font-black font-mono" style={{ color: "var(--color-primary)" }}>{grandTotal} {activeCountry?.currency}</span>
           </div>
           <button
             onClick={() => document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" })}
-            className="flex-1 font-black py-3 rounded-xl text-xs sm:text-sm shadow-lg transition text-white"
+            className="flex-1 font-black py-3 rounded-xl text-xs sm:text-sm shadow-lg transition text-white hover:brightness-110 active:scale-[0.99]"
             style={{ background: "var(--color-primary)" }}
           >
             {ctaButtonText}
@@ -1057,7 +1106,7 @@ export default function Home() {
             </div>
             <button
               onClick={handleApplyExitCoupon}
-              className="w-full text-white font-black py-3 rounded-xl text-sm transition shadow-lg"
+              className="w-full text-white font-black py-3 rounded-xl text-sm transition shadow-lg hover:brightness-110"
               style={{ background: "#059669" }}
             >
               تفعيل الخصم الآن وإتمام الطلب ⚡
