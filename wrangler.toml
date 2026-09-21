@@ -1,4 +1,4 @@
-Name = "luma-one-product-store"
+name = "sofian-store"
 compatibility_date = "2026-09-15"
 pages_build_output_dir = "dist/public"
 
@@ -10,7 +10,7 @@ database_id = "8ef5d0f8-90fa-4101-aa66-55c9480a01bc"
 migrations_dir = "drizzle"
 
 [vars]
-STORE_NAME = "LUMA Studio"
+STORE_NAME = "Sofian Store"
 DEFAULT_LOCALE = "ar"
 
 [[kv_namespaces]]
