@@ -59,6 +59,12 @@ export interface StoreConfig {
   activeCountry: string;
   countries: Record<string, CountryConfig>;
   productTitle: string;
+  seoTitle?: string;
+  metaDescription?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  allowIndexing?: boolean;
   productImage: string;
   gallery: GalleryItem[];
   videoUrl?: string;
@@ -179,7 +185,8 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/store")
       .then((res) => res.json())
-      .then((data) => {
+      .then((rawData) => {
+        const data = rawData as StoreConfig & { themeId?: string; selectedTheme?: string };
         if (data && Object.keys(data).length > 0) {
           setConfig(data);
           setSelectedImage(data.productImage);
@@ -187,8 +194,9 @@ export default function Home() {
             setTimeLeft({ minutes: data.timerMinutes, seconds: 0 });
           }
 
-          if (data.themeId || data.selectedTheme) {
-            setStoreThemeById(data.themeId || data.selectedTheme);
+          const themeId = data.themeId || data.selectedTheme;
+          if (themeId) {
+            setStoreThemeById(themeId);
           }
 
           const defaultSize = data.enableSizes && data.sizes ? data.sizes.split(",")[0]?.trim() : "";
@@ -244,6 +252,64 @@ export default function Home() {
       })
       .catch((err) => console.error(err));
   }, [setStoreThemeById]);
+
+  useEffect(() => {
+    if (!config) return;
+    const title = (config.seoTitle?.trim() || `${config.storeName} | ${config.productTitle}`).slice(0, 60);
+    const description = (config.metaDescription?.trim() || `${config.productTitle} من ${config.storeName}. اطلب الآن مع التوصيل والدفع عند الاستلام.`).slice(0, 160);
+    const ogTitle = config.ogTitle?.trim() || title;
+    const ogDescription = config.ogDescription?.trim() || description;
+    const ogImage = config.ogImage?.trim() || config.productImage;
+    document.title = title;
+
+    const setMeta = (selector: string, attrs: Record<string, string>, content: string) => {
+      let element = document.head.querySelector(selector) as HTMLMetaElement | null;
+      if (!element) {
+        element = document.createElement("meta");
+        Object.entries(attrs).forEach(([key, value]) => element?.setAttribute(key, value));
+        document.head.appendChild(element);
+      }
+      element.setAttribute("content", content);
+    };
+    setMeta('meta[name="description"]', { name: "description" }, description);
+    setMeta('meta[property="og:title"]', { property: "og:title" }, ogTitle);
+    setMeta('meta[property="og:description"]', { property: "og:description" }, ogDescription);
+    setMeta('meta[property="og:image"]', { property: "og:image" }, ogImage);
+    setMeta('meta[property="og:type"]', { property: "og:type" }, "product");
+    setMeta('meta[property="og:url"]', { property: "og:url" }, window.location.href.split("#")[0]);
+    setMeta('meta[name="twitter:card"]', { name: "twitter:card" }, "summary_large_image");
+    setMeta('meta[name="robots"]', { name: "robots" }, config.allowIndexing === false ? "noindex, nofollow" : "index, follow");
+
+    let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = window.location.href.split("#")[0];
+
+    let schema = document.head.querySelector('script[data-product-schema="true"]') as HTMLScriptElement | null;
+    if (!schema) {
+      schema = document.createElement("script");
+      schema.type = "application/ld+json";
+      schema.dataset.productSchema = "true";
+      document.head.appendChild(schema);
+    }
+    schema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: config.productTitle,
+      image: ogImage ? [ogImage] : undefined,
+      description,
+      offers: {
+        "@type": "Offer",
+        price: String(config.currentPrice),
+        priceCurrency: activeCountry?.currency || "EGP",
+        availability: config.stockLeft > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        url: window.location.href.split("#")[0]
+      }
+    });
+  }, [config]);
 
   useEffect(() => {
     if (!config || config.enableExitPopup === false) return;
@@ -394,7 +460,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload)
       });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string };
 
       if (res.ok) {
         setOrderSuccess(orderPayload);
@@ -556,7 +622,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen font-sans pb-28" style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
+    <div className={`store-page store-theme-${activeStoreTheme.id} min-h-screen font-sans pb-28`} style={{ background: "var(--color-bg)", color: "var(--color-text, #111827)" }} dir="rtl">
       {/* 1. الشريط العلوي */}
       {config.showTopBar && (
         <div className="text-xs font-black py-2.5 text-center px-4 transition text-white" style={{ background: "var(--color-primary)" }}>
