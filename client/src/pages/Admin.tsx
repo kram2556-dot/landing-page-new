@@ -60,6 +60,12 @@ export interface StoreConfig {
   activeCountry: string;
   countries: Record<string, CountryConfig>;
   productTitle: string;
+  seoTitle?: string;
+  metaDescription?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  allowIndexing?: boolean;
   productImage: string;
   gallery: GalleryItem[];
   videoUrl?: string;
@@ -171,6 +177,12 @@ const DEFAULT_CONFIG: StoreConfig = {
   activeCountry: "EG",
   countries: DEFAULT_COUNTRIES,
   productTitle: "سنيكرز إير كومفورت برو الطبي",
+  seoTitle: "",
+  metaDescription: "",
+  ogTitle: "",
+  ogDescription: "",
+  ogImage: "",
+  allowIndexing: true,
   productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
   gallery: [],
   videoUrl: "",
@@ -254,7 +266,8 @@ export default function Admin() {
 
     fetch("/api/store", { headers })
       .then((res) => res.json())
-      .then((cloudData) => {
+      .then((rawCloudData) => {
+        const cloudData = rawCloudData as Partial<StoreConfig>;
         if (cloudData && Object.keys(cloudData).length > 0) {
           const loadedBundles = (cloudData.bundles && cloudData.bundles.length > 0)
             ? cloudData.bundles.map((b: any, idx: number) => ({
@@ -302,7 +315,7 @@ export default function Admin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
       });
-      const data = await res.json();
+      const data = (await res.json()) as { token?: string; error?: string };
       if (res.ok && data.token) {
         sessionStorage.setItem("admin_token", data.token);
         setIsAuthenticated(true);
@@ -561,9 +574,9 @@ export default function Admin() {
   const activeCountryData = config.countries[config.activeCountry] || DEFAULT_COUNTRIES.EG;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 sm:p-6" dir="rtl">
+    <div className="admin-app min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 sm:p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between bg-neutral-900 border border-neutral-800 p-4 rounded-2xl">
+        <div className="admin-app-header flex items-center justify-between bg-neutral-900 border border-neutral-800 p-4 rounded-2xl">
           <div>
             <h1 className="text-xl font-black text-amber-400">إدارة المتجر</h1>
             <p className="text-xs text-emerald-400 font-semibold">حماية سحابية كاملة ومصادقة مشفرة ✓</p>
@@ -576,7 +589,7 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
+        <div className="admin-app-tabs flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
           {[
             { id: "product", name: "المنتج والصور والمميزات" },
             { id: "marketing_tools", name: "باقات العروض والترويج" },
@@ -604,6 +617,38 @@ export default function Admin() {
               <div>
                 <label className="block text-xs text-neutral-400 mb-1 font-bold">عنوان المنتج الرئيسي</label>
                 <input type="text" value={config.productTitle} onChange={(e) => setConfig({ ...config, productTitle: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs sm:text-sm font-bold" />
+              </div>
+              <div className="space-y-3 border-t border-neutral-800 pt-4">
+                <div>
+                  <label className="block text-xs text-amber-400 mb-1 font-bold">إعدادات الظهور في Google ووسائل التواصل</label>
+                  <p className="text-[10px] text-neutral-500 leading-relaxed">اترك الحقول فارغة لاستخدام قيم تلقائية من اسم المتجر والمنتج وصورة المنتج الحالية.</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">عنوان الصفحة SEO <span className="text-neutral-600">(حتى 60 حرفًا)</span></label>
+                  <input maxLength={60} type="text" value={config.seoTitle || ""} onChange={(e) => setConfig({ ...config, seoTitle: e.target.value })} placeholder="يُستخدم تلقائيًا: اسم المتجر | اسم المنتج" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">وصف الصفحة <span className="text-neutral-600">(حتى 160 حرفًا)</span></label>
+                  <textarea maxLength={160} rows={3} value={config.metaDescription || ""} onChange={(e) => setConfig({ ...config, metaDescription: e.target.value })} placeholder="وصف مختصر وجذاب للمنتج والمتجر يظهر في Google..." className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs leading-relaxed" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-neutral-400 mb-1">عنوان المشاركة (اختياري)</label>
+                    <input type="text" value={config.ogTitle || ""} onChange={(e) => setConfig({ ...config, ogTitle: e.target.value })} placeholder="يستخدم عنوان SEO تلقائيًا" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-neutral-400 mb-1">رابط صورة المشاركة (اختياري)</label>
+                    <input type="url" value={config.ogImage || ""} onChange={(e) => setConfig({ ...config, ogImage: e.target.value })} placeholder="تستخدم صورة المنتج تلقائيًا" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">وصف المشاركة (اختياري)</label>
+                  <textarea rows={2} value={config.ogDescription || ""} onChange={(e) => setConfig({ ...config, ogDescription: e.target.value })} placeholder="يستخدم وصف الصفحة تلقائيًا" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs leading-relaxed" />
+                </div>
+                <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                  <input type="checkbox" checked={config.allowIndexing !== false} onChange={(e) => setConfig({ ...config, allowIndexing: e.target.checked })} className="w-4 h-4 accent-amber-500" />
+                  السماح لمحركات البحث بفهرسة الصفحة
+                </label>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
